@@ -35,7 +35,8 @@ const CONTROL = !process.argv.includes("--no-control");
 
 const AWS = fillTemplate("{{FAKE_AWS_KEY}}", 101);
 const TOKEN = fillTemplate("{{FAKE_SK_KEY}}", 102);
-const SECRETS = [AWS, TOKEN];
+const PHONE = fillTemplate("{{FAKE_PHONE}}", 103);
+const SECRETS = [AWS, TOKEN, PHONE];
 
 const PROBE = `
 import { appendFileSync } from "node:fs";
@@ -51,7 +52,7 @@ export default function (pi) {
 
 function makeRepo(): string {
   const dir = mkdtempSync(join(tmpdir(), "secret-guard-e2e-"));
-  writeFileSync(join(dir, ".env"), `APP_NAME=orders\nAWS_ACCESS_KEY_ID=${AWS}\nAPI_TOKEN=${TOKEN}\nLOG_LEVEL=info\n`);
+  writeFileSync(join(dir, ".env"), `APP_NAME=orders\nAWS_ACCESS_KEY_ID=${AWS}\nAPI_TOKEN=${TOKEN}\nSUPPORT_PHONE=${PHONE}\nLOG_LEVEL=info\n`);
   writeFileSync(join(dir, "check.mjs"), `import { readFileSync } from "node:fs";
 const env = Object.fromEntries(readFileSync(new URL(".env", import.meta.url), "utf8").trim().split("\\n").map((l) => l.split(/=(.*)/s).slice(0, 2)));
 console.log(process.argv[2] === env.API_TOKEN ? "TOKEN_OK" : "TOKEN_MISMATCH");

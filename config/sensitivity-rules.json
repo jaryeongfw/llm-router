@@ -79,7 +79,8 @@
       },
       "pattern": "(?<!\\d)\\d{6}\\s?-\\s?[1-8]\\d{6}(?!\\d)",
       "validator": "kr_rrn_shape",
-      "note": "형식만 검사. 날짜 유효성은 보지 않는다(재현율 우선)"
+      "mask": true,
+      "note": "형식만 검사. 날짜 유효성은 보지 않는다(재현율 우선). mask: true → 값은 모델로 가기 전 가린다(§6.5, 도구 실행 직전 복원)"
     },
     {
       "id": "pii.phone_kr",
@@ -88,7 +89,9 @@
       "effect": {
         "data_sensitivity": "internal_only"
       },
-      "pattern": "(?<!\\d)01[016789][-.\\s]?\\d{3,4}[-.\\s]?\\d{4}(?!\\d)"
+      "pattern": "(?<!\\d)01[016789][-.\\s]?\\d{3,4}[-.\\s]?\\d{4}(?!\\d)",
+      "mask": true,
+      "note": "mask: true → 값은 모델로 가기 전 가린다(§6.5, 도구 실행 직전 복원)"
     },
     {
       "id": "pii.email",
@@ -141,7 +144,8 @@
       ],
       "word_boundary": true,
       "unless_followed_by": "\\s*(?:을|를|의)?\\s*(?:(?:마스킹|마스크|비식별화?|익명화|가명화|암호화|탐지|검출|필터링?|제거|masking|mask|redaction|redact|detection|detect|scrubbing|scrub|filtering|filter|anonymi[sz]ation)\\s*(?:용\\s*)?(?:함수|유틸(?:리티)?|로직|모듈|기능|규칙|정규식|패턴|라이브러리|코드|클래스|미들웨어|테스트|function|util(?:ity|ities|s)?|helper|logic|module|rules?|regex(?:es)?|patterns?|library|code|class|middleware|tests?)|정규식|regex(?:es)?|보호\\s*법|처리\\s*방침)",
-      "note": "데이터 종류를 가리키는 말. 처리 기능을 만드는 주제어 용법(\"개인정보 마스킹 함수\", \"PII 탐지 정규식\", \"개인정보 보호법\")은 제외한다. 붙여 넣은 실제 값은 pii 규칙이 따로 잡는다"
+      "tool_result_scan": false,
+      "note": "데이터 종류를 가리키는 말. 처리 기능을 만드는 주제어 용법(\"개인정보 마스킹 함수\", \"PII 탐지 정규식\", \"개인정보 보호법\")은 제외한다. 붙여 넣은 실제 값은 pii 규칙이 따로 잡는다. 코드·문서에 이 말이 나온다고 데이터가 있다는 증거가 아니므로 도구 결과 검사에는 쓰지 않는다(tool_result_scan: false)"
     },
     {
       "id": "internal_marker.keywords_en",

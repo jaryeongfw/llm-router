@@ -238,7 +238,9 @@ export function registerRouter(pi: RouterHost, loaded: Loaded, opts: { onDecisio
 
   // ---- 도구 결과의 개인정보·기밀 표식 검사 (정책: 경고). 값은 어디에도 남기지 않고 규칙 id와 도구 이름만 남긴다.
   // 비밀 값은 secret-guard가 가리므로 여기서는 보지 않는다. secret 규칙은 접속 문자열이 이메일로 오인되는 것을 막는 용도로만 넣는다.
-  const toolRules = rules.filter((r) => r.group === "secret" || r.group === "pii" || r.group === "internal_marker");
+  // internal_marker.data_terms(고객정보·PII 등)는 데이터가 있다는 표식이 아니라 말 자체라, 코드·문서에 흔하게 나오는
+  // 도구의 결과에서는 제외한다 (tool_result_scan: false). 붙여 넣은 실제 값은 pii 규칙이 따로 잡는다.
+  const toolRules = rules.filter((r) => (r.group === "secret" || r.group === "pii" || r.group === "internal_marker") && r.tool_result_scan !== false);
   const localRefs = new Set(cfg.local_models.map((m) => (typeof m === "string" ? m : m.ref)));
   const toolSeen = new Map<string, Map<string, { tool: string; rules: string[]; warned: boolean }>>();
   const toolWarnings = new Map<string, ToolResultWarning[]>();

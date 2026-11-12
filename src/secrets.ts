@@ -5,7 +5,7 @@
  * - 원래 값과 자리표시의 대응은 메모리에만 둔다. 어디에도 기록하지 않는다.
  * - 같은 값은 항상 같은 번호를 받는다. 대화 기록을 처음부터 같은 순서로 가리므로 프롬프트 캐시가 유지된다.
  */
-import { secretLabel, secretSpans, type CompiledRule } from "./stage1.ts";
+import { isMaskableRule, maskLabel, secretSpans, type CompiledRule } from "./stage1.ts";
 
 export const PLACEHOLDER_RE = /\[\[MASKED (\d+)(?: [a-z0-9_]+)?\]\]/g;
 
@@ -21,7 +21,8 @@ export class SecretVault {
   private byIndex = new Map<number, Entry>();
 
   constructor(rules: CompiledRule[]) {
-    this.rules = rules.filter((r) => r.group === "secret");
+    // secret 그룹 + mask 표시 pii 규칙(전화번호·주민번호)만 가린다 (07-spec §6.5)
+    this.rules = rules.filter(isMaskableRule);
   }
 
   get size(): number {
@@ -40,13 +41,13 @@ export class SecretVault {
 
   /** 텍스트 하나를 가린다. 이미 가린 자리표시는 그대로 둔다. */
   maskText(text: string): { text: string; count: number } {
-    const spans = secretSpans(this.rules, text);
+    const spans = secretSpans(this.rules, text, isMaskableRule);
     if (spans.length === 0) return { text, count: 0 };
     let out = "";
     let pos = 0;
     for (const sp of spans) {
       const value = text.slice(sp.start, sp.end);
-      const label = secretLabel(sp.rule);
+      const label = maskLabel(sp.rule);
       out += text.slice(pos, sp.start) + `[[MASKED ${this.indexFor(value, label)} ${label}]]`;
       pos = sp.end;
     }

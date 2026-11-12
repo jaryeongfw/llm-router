@@ -18,6 +18,10 @@ export interface RuleDef {
   threshold_tokens?: number;
   /** keywords: 영문·숫자로 시작·끝나는 키워드는 식별자 안에서 매치하지 않는다 (isConfidential, PII_FIELD 등) */
   word_boundary?: boolean;
+  /** true면 매치된 값을 모델로 보내기 전 가린다. secret 그룹은 항상 가린다 (07-spec §6.5) */
+  mask?: boolean;
+  /** false면 도구 결과 민감 정보 검사에 적용하지 않는다 (07-spec §6.6). 기본 true. 주제어(고객정보·PII 등)는 코드·문서에 흔해 표식으로 쓰지 않는다 */
+  tool_result_scan?: boolean;
   /** regex·keywords: 매치 바로 뒤가 이 패턴이면 그 매치는 무시한다 (부정 표현, 주제어 용법) */
   unless_followed_by?: string;
   /** regex·keywords: 매치 바로 앞이 이 패턴으로 끝나면 그 매치는 무시한다 */
@@ -203,19 +207,27 @@ export function runStage1Safe(rules: Compiled[], input: Stage1Input): Stage1Resu
 
 export interface SecretSpan { start: number; end: number; rule: string }
 
-/** 가림 자리표시에 쓰는 짧은 이름. 점이나 대입 기호가 없어 규칙에 다시 걸리지 않는다. */
-export function secretLabel(ruleId: string): string {
-  return ruleId.replace(/^secret\./, "");
+/** 가림 규칙: secret 그룹 + mask를 표시한 pii 규칙 (07-spec §6.5). */
+export const isMaskableRule = (r: Compiled): boolean => r.group === "secret" || r.mask === true;
+
+/** 1단 선(先)가림과 2단 입력·진단 로그용: secret 그룹만 가린다. */
+export const isSecretRule = (r: Compiled): boolean => r.group === "secret";
+
+/**
+ * 가림 자리표시에 쓰는 짧은 이름. 그룹 접두를 뗀 규칙 이름 — 점이나 대입 기호가 없어 규칙에 다시 걸리지 않는다.
+ */
+export function maskLabel(ruleId: string): string {
+  return ruleId.split(".").pop() ?? ruleId;
 }
 
 /**
- * secret 규칙에 걸린 구간. 이름 있는 그룹 v 또는 w가 있으면 그 부분만, 없으면 매치 전체.
- * 겹치는 구간은 합친다 (앞선 규칙 이름 유지).
+ * 가림 규칙에 걸린 구간. 이름 있는 그룹 v 또는 w가 있으면 그 부분만, 없으면 매치 전체.
+ * 겹치는 구간은 합친다 (앞선 규칙 이름 유지). 기본은 secret 그룹만; 복원 가능한 가림(SecretVault)은 isMaskableRule을 쓴다.
  */
-export function secretSpans(rules: Compiled[], text: string): SecretSpan[] {
+export function secretSpans(rules: Compiled[], text: string, isMaskable: (r: Compiled) => boolean = isSecretRule): SecretSpan[] {
   const spans: SecretSpan[] = [];
   for (const rule of rules) {
-    if (rule.group !== "secret" || !rule.re) continue;
+    if (!isMaskable(rule) || !rule.re) continue;
     const flags = new Set([...rule.re.flags, "d", "g"]);
     const re = new RegExp(rule.re.source, [...flags].join(""));
     for (const m of text.matchAll(re)) {
@@ -244,7 +256,7 @@ export function maskSecrets(rules: Compiled[], text: string): { text: string; ma
   let out = "";
   let pos = 0;
   for (const sp of spans) {
-    out += text.slice(pos, sp.start) + `[[MASKED ${secretLabel(sp.rule)}]]`;
+    out += text.slice(pos, sp.start) + `[[MASKED ${maskLabel(sp.rule)}]]`;
     pos = sp.end;
   }
   return { text: out + text.slice(pos), masked: spans.length };

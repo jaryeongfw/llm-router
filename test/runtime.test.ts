@@ -215,6 +215,13 @@ test("도구 결과 검사: 민감 정보 없음, 로컬 모델로 가는 중, �
   assert.equal(local.notes.length, 1, "외부 모델로 바뀌면 이전 도구 결과에 대해 경고한다");
 });
 
+test("도구 결과의 주제어(data_terms)는 경고하지 않는다 (표식이 아니라 말)", async () => {
+  const { route, ctx, user, notes } = setup({ local: [], analyzer: byPrompt });
+  const r = await user("마이크로서비스 설계 판단");
+  await cont(route, ctx, r.state, r.model, [toolResult("고객정보 처리 모듈 구현. 개인정보 마스킹은 따로 보강할 것")]);
+  assert.equal(notes.length, 0);
+});
+
 test("도구 결과의 비밀 값은 여기서 보지 않는다 (secret-guard 담당)", async () => {
   const { route, ctx, user, notes } = setup({ local: [], analyzer: byPrompt });
   const r = await user("마이크로서비스 설계 판단");

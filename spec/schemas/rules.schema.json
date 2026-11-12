@@ -80,6 +80,14 @@
             "type": "boolean",
             "description": "keywords: 영문·숫자 가장자리는 식별자 안에서 매치하지 않음"
           },
+          "mask": {
+            "type": "boolean",
+            "description": "true면 매치된 값을 모델로 보내기 전 가린다 (secret 그룹은 항상 true) (07-spec §6.5)"
+          },
+          "tool_result_scan": {
+            "type": "boolean",
+            "description": "false면 도구 결과 민감 정보 검사에 적용하지 않는다 (07-spec §6.6). 기본 true"
+          },
           "unless_followed_by": {
             "type": "string",
             "description": "매치 바로 뒤가 이 정규식이면 그 매치를 무시 (부정 표현, 주제어 용법)"

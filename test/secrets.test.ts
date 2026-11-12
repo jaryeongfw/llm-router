@@ -42,6 +42,19 @@ test("개인 키는 블록 전체를 가린다", () => {
   assert.match(m.text, /^키:\n\[\[MASKED \d+ private_key\]\]\n끝$/);
 });
 
+test("전화번호·주민번호도 가린다 (mask 규칙). 복원도 된다", () => {
+  const v = new SecretVault(rules);
+  const phone = fillTemplate("{{FAKE_PHONE}}", 21);
+  const rrn = fillTemplate("{{FAKE_RRN}}", 22);
+  const text = `연락처 ${phone}, 주민번호 ${rrn}`;
+  const m = v.maskText(text);
+  assert.equal(m.count, 2);
+  assert.ok(!m.text.includes(phone) && !m.text.includes(rrn));
+  assert.match(m.text, /\[\[MASKED \d+ phone_kr\]\]/);
+  assert.match(m.text, /\[\[MASKED \d+ kr_rrn\]\]/);
+  assert.equal(v.unmaskText(m.text).text, text);
+});
+
 test("메시지 구조: 사용자·도구 결과·도구 인자는 가리고, thinking과 서명된 텍스트는 그대로", () => {
   const v = new SecretVault(rules);
   const msgs = [
