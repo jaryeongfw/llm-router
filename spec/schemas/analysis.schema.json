@@ -88,6 +88,16 @@
     },
     "sensitivity_suspected": {
       "type": "boolean"
+    },
+    "analyzer_model": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "masked_for_analyzer": {
+      "type": "boolean",
+      "description": "2단에 비밀정보를 가린 텍스트를 보냈는지"
     }
   }
 }

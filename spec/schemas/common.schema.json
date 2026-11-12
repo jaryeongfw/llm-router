@@ -187,6 +187,10 @@
             "null"
           ],
           "minimum": 0
+        },
+        "secret_present": {
+          "type": "boolean",
+          "description": "비밀정보 형식 문자열 포함. 사내 게이트웨이가 거부하므로 secret_policy를 따른다"
         }
       }
     },
@@ -236,6 +240,35 @@
         "balanced",
         "quality"
       ]
+    },
+    "band": {
+      "enum": [
+        "easy",
+        "hard"
+      ],
+      "description": "조회표 키. easy = 난이도 0~1, hard = 2~3"
+    },
+    "analyzer_route": {
+      "type": "object",
+      "required": [
+        "model",
+        "fallbacks"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "model": {
+          "$ref": "#/$defs/model_ref"
+        },
+        "fallbacks": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/model_ref"
+          }
+        },
+        "thinking": {
+          "$ref": "#/$defs/thinking"
+        }
+      }
     }
   }
 }

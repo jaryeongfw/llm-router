@@ -19,7 +19,9 @@
     "log_dir",
     "virtual_levels",
     "operating_points",
-    "thinking_rules"
+    "thinking_rules",
+    "secret_policy",
+    "verifiable_down"
   ],
   "additionalProperties": false,
   "properties": {
@@ -63,25 +65,28 @@
     "analyzer": {
       "type": "object",
       "required": [
-        "model",
-        "fallbacks",
-        "timeout_ms"
+        "external_ok",
+        "internal_only",
+        "timeout_ms",
+        "mask_secrets"
       ],
       "additionalProperties": false,
       "properties": {
-        "model": {
-          "$ref": "common.schema.json#/$defs/model_ref"
+        "external_ok": {
+          "$ref": "common.schema.json#/$defs/analyzer_route"
+        },
+        "internal_only": {
+          "$ref": "common.schema.json#/$defs/analyzer_route"
         },
         "timeout_ms": {
-          "type": "integer"
+          "type": "integer",
+          "minimum": 0
         },
-        "fallbacks": {
-          "type": "array",
-          "items": {
-            "$ref": "common.schema.json#/$defs/model_ref"
-          }
+        "mask_secrets": {
+          "type": "boolean"
         }
-      }
+      },
+      "description": "1단 민감도 판정에 따라 분석기를 고른다. internal_only 요청은 사내 분석기만"
     },
     "internal_markers": {
       "type": "object",
@@ -231,6 +236,51 @@
         },
         "max_thinking": {
           "$ref": "common.schema.json#/$defs/thinking"
+        }
+      }
+    },
+    "secret_policy": {
+      "type": "object",
+      "required": [
+        "tier",
+        "on_failure"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "tier": {
+          "$ref": "common.schema.json#/$defs/id"
+        },
+        "on_failure": {
+          "enum": [
+            "block"
+          ]
+        }
+      },
+      "description": "비밀정보 포함 태스크의 배정 티어"
+    },
+    "verifiable_down": {
+      "type": "object",
+      "required": [
+        "max_difficulty",
+        "confident_max_difficulty",
+        "min_confidence"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "max_difficulty": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 3
+        },
+        "confident_max_difficulty": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 3
+        },
+        "min_confidence": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
         }
       }
     }

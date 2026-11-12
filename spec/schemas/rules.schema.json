@@ -88,6 +88,9 @@
               },
               "add_capability": {
                 "$ref": "common.schema.json#/$defs/capability"
+              },
+              "secret_present": {
+                "type": "boolean"
               }
             }
           },

@@ -76,7 +76,8 @@
               "verifiable_down",
               "capability_filter",
               "context_filter",
-              "sensitivity_filter"
+              "sensitivity_filter",
+              "secret_policy"
             ]
           }
         },
@@ -112,9 +113,17 @@
               "verifiable_down",
               "operating_point_shift",
               "clamped_to_model",
-              "local_off"
+              "local_off",
+              "difficulty_up"
             ]
           }
+        },
+        "analyzer": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "2단에 쓴 분석기 모델"
         }
       }
     },

@@ -66,6 +66,9 @@
         },
         "ambiguity": {
           "$ref": "common.schema.json#/$defs/level"
+        },
+        "secret_present": {
+          "type": "boolean"
         }
       }
     },
