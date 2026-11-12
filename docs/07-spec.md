@@ -116,7 +116,7 @@ test/                       stage1, stage2, analyze, decide 단위 테스트 (no
 - **Claude 자동 선택** (`analyzer.claude_auto`, `src/models.ts` `pickClaudeAnalyzer`)
   - 쓸 수 있는(자격 증명이 있는) 모델 중 haiku 계열 최신 버전을 고른다. 날짜 없는 별칭과 `anthropic` 공급자를 우선한다.
   - haiku가 없으면 입력 단가가 가장 싼 Claude 모델을 고른다. thinking은 off다.
-- 판단 모델이 시간 상한(`analyzer.timeout_ms`, 기본 12초)을 넘거나 실패하면 다음 후보로 넘어간다. 본문 없이 출력 상한에 걸린 응답도 실패로 본다.
+- 판단 모델이 시간 상한(`analyzer.timeout_ms`, 기본 12초)을 넘거나, 호출에 실패하거나, 형식이 맞지 않으면 다음 후보로 넘어간다. 본문 없이 출력 상한에 걸린 응답도 실패로 본다. 같은 모델로 다시 시도하지는 않는다.
 - 지연 참고(08 §6, §8): local 판단 모델은 2단 한 번에 수 초(측정한 로컬 모델 p50 약 6~7초)가 걸렸다. Claude haiku는 약 1.5~2초였다. **판단은 쿼리마다 한 번** 일어나므로 이 지연이 쿼리마다 첫 응답 앞에 붙는다. 지연이 중요하면 `analyzer.prefer: "claude"`로 바꾼다.
 - 2단이 실패하면(시간 초과, 파싱 실패, 서버 불가) 1단 결과만으로 진행한다. 차원은 모두 `null`, `confidence = 0`으로 둔다.
 - 1단 민감도 판정 자체가 예외로 실패하면 **민감으로 간주**한다.
@@ -281,11 +281,20 @@ test/                       stage1, stage2, analyze, decide 단위 테스트 (no
 
 | 명령 | 동작 |
 |---|---|
-| `/router status` | 마지막 쿼리의 티어, 모델, 추론 강도, 조회표 칸과 보정, 판단 모델과 지연 (구현됨) |
+| `/router status` | 마지막 쿼리의 티어, 모델, 추론 강도, 조회표 칸과 보정, 판단 모델과 지연, 사용량 (구현됨) |
+| `/router stats` | 세션의 티어별·모델별 막대, 호출 수, 토큰(캐시 포함), 비용 (구현됨) |
 | `/router pin <tier>[:<thinking>]` | 고정 티어와 추론 강도를 바꾼다. 추론 강도만 바꾸려면 `/router pin :high`. 민감 세션에서 외부 티어는 거부. 하향은 즉시, **상향은 경고 후 확인**(캐시 손실, 06 §2.1) |
 | `/router new-task` | 상태를 지워 다음 사용자 메시지에서 다시 분석 |
 | `/router escalate [--thinking]` | §6.3의 다음 단계를 정한다. 첫 사용자 메시지 앞에서 fork하고, 그 단계를 고정한 상태로 같은 프롬프트를 다시 보낸다. 작업 트리 변경이 있으면 먼저 확인을 받는다(git stash 또는 체크포인트) |
 | `/router feedback good\|bad [메모]` | 결과 라벨 기록 |
+
+### 7.5 화면 (src/ui.ts, src/report.ts)
+
+- **쿼리 카드**: `agent_settled`에서 router/auto 쿼리의 결정과 그 쿼리 응답들의 사용량을 `llm-router-query` 항목(`pi.appendEntry`)으로 남긴다. `registerEntryRenderer`로 대화 안에 그린다. 모델 입력에는 들어가지 않는다. 쿼리 원문은 담지 않는다.
+  - 새 결정이 없는 쿼리에는 카드를 남기지 않는다. 예외는 세션 고정(`pin_scope: session`)일 때로, 이때는 "이전 결정 유지" 카드를 남긴다.
+- **상태줄**: `ctx.ui.setStatus("llm-router", …)`로 세션 누적 티어별 쿼리 수와 비용을 보인다. `session_start`에서 카드로 복원한다.
+- 입력 토큰은 비캐시 입력 + 캐시 읽기 + 캐시 쓰기 합계다. Anthropic은 첫 호출의 입력 대부분을 캐시 쓰기로 집계한다.
+- 검증: `npm run e2e:ui` (RPC 세션에서 카드 저장, 카드 모델 = 실제 응답 모델, 상태줄, 명령 출력).
 
 ## 8. 기록과 프라이버시
 

@@ -100,9 +100,44 @@ pi --model router/auto:high       # 운영점 지정 (아래 표)
 | `medium` (기본) | balanced | 조회표 그대로 |
 | `high` | quality | 추론 강도 한 단계 높임. 검증 가능하고 쉬운 작업이라도 낮은 티어로 내리지 않음 |
 
+### 어떤 모델을 썼는지 보기
+
+**쿼리 카드**: router/auto로 처리한 쿼리가 끝나면 응답 아래에 카드가 붙는다. 카드는 세션에 저장되지만 모델 입력에는 들어가지 않는다. 펼치면 모델별 내역과 추론 보정이 보인다.
+
+```
+◆ router  heavy · claude-opus-5-5 · xhigh  design/hard
+  호출 1회 · 입력 3.7K (캐시 2.0K) · 출력 1.5K · $0.040
+  판단 local-coder 6.6s
+```
+
+- 결정과 다른 모델이 응답했으면(재시도 중 전환 등) 모델별 줄에 `!`로 표시한다.
+- 판단 모델이 실패해 기본 티어로 갔으면 `판단 실패(형식 오류) → 기본 티어`처럼 경고한다.
+
+**상태줄**: 세션 누적 티어별 쿼리 수와 비용이 하단에 보인다. 세션을 다시 열면 카드에서 복원한다.
+
+```
+router ▸ local 2 · heavy 1  $0.053
+```
+
+**명령**
+
 | 명령 | 동작 |
 |---|---|
-| `/router status` | 마지막 쿼리의 티어·모델·추론 강도, 조회표 칸과 보정, 판단 모델과 지연 |
+| `/router` 또는 `/router status` | 마지막 쿼리의 결정과 사용량 (펼친 카드) |
+| `/router stats` | 이 세션의 티어별·모델별 막대, 호출 수, 토큰, 비용 |
+
+```
+llm-router · 이 세션 라우팅 쿼리 3건 · $0.053
+
+티어별 (router/auto로 처리한 쿼리)
+  local     ████████████████  2건   4회    $0
+  heavy     ████████░░░░░░░░  1건   1회    $0.053
+  추론 강도: off 2 · xhigh 1
+
+모델별 (이 세션의 모든 응답)
+  local-coder                ████████████  4회    입력 6.2K    출력 522     $0
+  claude-opus-5-5            ███░░░░░░░░░  1회    입력 3.7K    출력 1.5K    $0.053
+```
 
 - 티어: `local`(로컬 모델을 설정한 경우) < `light`(haiku-5-5) < `standard`(sonnet-5-5) < `heavy`(opus-5-5). 쓸 수 없는 티어는 건너뛴다.
 - 결정 로그: `~/.pi/agent/llm-router/decisions.jsonl`. 쿼리 원문은 남기지 않고 해시와 분석 결과만 남긴다.
@@ -122,6 +157,7 @@ pi --model router/auto:high       # 운영점 지정 (아래 표)
 node scripts/e2e-routing.ts              # 한 세션에 쿼리 4개: 쿼리별 결정과 도구 루프 유지 확인
 node scripts/e2e-routing.ts --no-local   # local 없는 환경: Claude 자동 판단, 로컬 전용 쿼리 차단
 npm run e2e:secrets                      # 비밀 값이 공급자 요청 본문에 들어가지 않는지 확인 (가짜 값)
+npm run e2e:ui                           # 쿼리 카드 저장, 상태줄, /router stats·status 출력 확인
 ```
 
 실제 모델을 호출하므로 소액의 API 비용이 든다(설계 쿼리 1건이 opus로 간다). 결과는 [docs/08-routing-eval.md §7~8](docs/08-routing-eval.md)에 있다.
@@ -143,7 +179,8 @@ node scripts/eval-routing.ts [--analyzer policy|<모델>] [--rescore bench/resul
 | 경로 | 내용 |
 |---|---|
 | `src/index.ts` | pi 확장 진입점 (`package.json`의 `pi.extensions`) |
-| `src/runtime.ts` | `router/auto` virtual model: 쿼리별 결정, 도구 루프 유지, `/router` 명령, 결정 로그 |
+| `src/runtime.ts` | `router/auto` virtual model: 쿼리별 결정, 도구 루프 유지, 결정 로그 |
+| `src/ui.ts`, `src/report.ts` | 쿼리 카드, 상태줄, `/router status`·`stats` (집계·표시는 순수 함수) |
 | `src/config.ts`, `src/models.ts` | 설정 계층(기본값 + 사용자 설정), local 모델·판단 모델 해석, Claude 자동 선택 |
 | `src/stage1.ts`, `src/stage2.ts`, `src/analyze.ts`, `src/decide.ts` | 1단 규칙, 2단 판단, 병합, 결정 규칙 |
 | `src/secrets.ts`, `src/secret-guard.ts` | 모든 모델 호출의 비밀 값 가림·복원 |
@@ -168,6 +205,6 @@ node scripts/eval-routing.ts [--analyzer policy|<모델>] [--rescore bench/resul
 
 ## 상태
 
-- 동작함: 쿼리별 라우팅, 판단 모델 자동 선택, 로컬 전용 데이터 차단, 비밀 값 가림, `/router status`, 결정 로그.
+- 동작함: 쿼리별 라우팅, 판단 모델 자동 선택, 로컬 전용 데이터 차단, 비밀 값 가림, 쿼리 카드·상태줄·`/router status`·`stats`, 결정 로그.
 - 조회표는 가설값(prior)이다. 고른 티어가 실제로 과제를 성공시키는지는 아직 측정하지 않았다(결과 기준 평가 예정).
 - 미구현: `/router pin`·`escalate`·`feedback`, 같은 세션의 새 태스크 감지(스펙 §7.4, §13).
