@@ -40,7 +40,6 @@ export interface RouterHost {
     provider: string; id: string; name: string; thinkingLevels: string[]; contextWindow?: number; maxTokens?: number;
     route(req: RouteRequest<RouterState>, ctx: RouteCtx): Promise<RouteResult<RouterState>>;
   }): void;
-  registerCommand?(name: string, opts: { description: string; handler: (args: string, ctx: { ui: { notify(msg: string, level?: string): void }; sessionManager?: { getSessionId(): string } }) => unknown }): void;
 }
 
 export interface RouterState {
@@ -113,6 +112,7 @@ export function registerRouter(pi: RouterHost, loaded: Loaded, opts: { onDecisio
   const { cfg, taxonomy, rules, table } = loaded;
   const log = new DecisionLog(cfg.log_dir);
   const last = new Map<string, DecisionRecord>();
+  const pending = new Map<string, DecisionRecord>();
 
   const completeVia = (reg: Registry, ref: string, thinking?: Thinking): Complete => async (system, user, signal) => {
     const { provider, id } = splitRef(ref);
@@ -166,6 +166,7 @@ export function registerRouter(pi: RouterHost, loaded: Loaded, opts: { onDecisio
     const rec: DecisionRecord = { state, decision, analyzer: s2.model ?? null, stage2: s2.status, latency_ms: { stage1: t1 - t0, stage2: route.length ? s2.latency_ms : null, total: Date.now() - t0 } };
     const sid = ctx.sessionManager?.getSessionId() ?? "default";
     last.set(sid, rec);
+    pending.set(sid, rec);
     opts.onDecision?.(rec);
     log.write({
       v: 1, ts: state.decided_at, session: log.hash(sid).slice(0, 12), query: state.query_id, prompt_hash: qid,
@@ -211,19 +212,14 @@ export function registerRouter(pi: RouterHost, loaded: Loaded, opts: { onDecisio
     },
   });
 
-  pi.registerCommand?.("router", {
-    description: "llm-router: 마지막 결정 보기 (/router status)",
-    handler: (_args, ctx) => {
-      const rec = last.get(ctx.sessionManager?.getSessionId() ?? "default");
-      if (!rec) return ctx.ui.notify("아직 결정이 없습니다. /model router/auto 로 선택한 뒤 질문하세요.", "info");
-      const d = rec.decision;
-      ctx.ui.notify([
-        `티어 ${d.tier} · ${d.model} · 추론 ${d.thinking} (운영점 ${d.operating_point})`,
-        `조회표 ${d.table_cell ?? "-"}${d.adjustments.length ? ` · 보정 ${d.adjustments.join(", ")}` : ""}${d.thinking_adjustments.length ? ` · 추론 보정 ${d.thinking_adjustments.join(", ")}` : ""}`,
-        `판단 모델 ${rec.analyzer ?? "없음"} (${rec.stage2}) · ${rec.latency_ms.total}ms${d.ask_user ? " · 요청이 모호합니다" : ""}`,
-      ].join("\n"), "info");
+  return {
+    last,
+    pinScope: cfg.pin_scope,
+    /** 이번 쿼리에서 새로 내린 결정을 한 번만 꺼낸다 (쿼리 카드용) */
+    takePending(sid: string) {
+      const r = pending.get(sid);
+      pending.delete(sid);
+      return r;
     },
-  });
-
-  return { last };
+  };
 }
