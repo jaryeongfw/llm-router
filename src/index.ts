@@ -15,4 +15,8 @@ export default function llmRouter(pi: RouterHost & GuardHost & UiHost) {
   registerSecretGuard(pi, loaded.rules);
   const router = registerRouter(pi, loaded);
   registerUi(pi, router);
+  // 사용자 설정 오류는 로딩을 막지 않고 세션 시작 때 알린다 (무시된 항목은 기본값으로 동작)
+  if (loaded.configIssues.length) {
+    pi.on("session_start", (_e, ctx) => ctx.ui.notify(`llm-router 설정 문제:\n- ${loaded.configIssues.join("\n- ")}`, "warning"));
+  }
 }
