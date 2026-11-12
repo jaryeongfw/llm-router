@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "note": "1단 규칙. 재현율 우선. 매치된 값은 어디에도 기록하지 않고 규칙 id만 남긴다. secret은 사내 게이트웨이가 거부하므로 internal_only가 아니라 secret_present로 표시하고 secret_policy를 따른다.",
+  "note": "1단 규칙. 재현율 우선. 매치된 값은 어디에도 기록하지 않고 규칙 id만 남긴다. secret은 internal_only가 아니라 secret_present로 표시한다. 런타임은 모든 모델 호출에서 비밀 값을 가린다(07-spec §6.5). 규칙에 이름 있는 그룹 v 또는 w가 있으면 그 부분만 가린다.",
   "rules": [
     {
       "id": "secret.private_key",
@@ -9,7 +9,8 @@
       "effect": {
         "secret_present": true
       },
-      "pattern": "-----BEGIN (?:RSA |EC |OPENSSH |DSA |)PRIVATE KEY-----"
+      "pattern": "-----BEGIN (?:RSA |EC |OPENSSH |DSA |ENCRYPTED |)PRIVATE KEY-----(?:[\\s\\S]*?-----END (?:RSA |EC |OPENSSH |DSA |ENCRYPTED |)PRIVATE KEY-----|[\\s\\S]*$)",
+      "note": "헤더부터 END까지 블록 전체. END가 없으면 텍스트 끝까지 (가림 범위를 보수적으로)"
     },
     {
       "id": "secret.aws_access_key",
@@ -54,9 +55,9 @@
       "effect": {
         "secret_present": true
       },
-      "pattern": "(?:password|passwd|pwd|비밀번호|secret|api[_-]?key|token)[\"']?\\s*[:=]\\s*(?:([\"'])[^\"'\\s]{6,}\\1|(?=[^\\s\"'(),;]*\\d)(?=[^\\s\"'(),;]*[A-Za-z])[^\\s\"'(),;]{8,}(?![\\w(]))",
+      "pattern": "(?:password|passwd|pwd|비밀번호|secret|api[_-]?key|token)[\"']?\\s*[:=]\\s*(?:([\"'])(?<v>[^\"'\\s]{6,})\\1|(?<w>(?=[^\\s\"'(),;]*\\d)(?=[^\\s\"'(),;]*[A-Za-z])[^\\s\"'(),;]{8,})(?![\\w(]))",
       "flags": "i",
-      "note": "값이 따옴표 리터럴이거나, 영문·숫자가 섞인 8자 이상 값일 때만. `secret: true`, `token = getToken()`, `process.env.X` 같은 코드 식별자는 제외 (08 §6.5)"
+      "note": "값이 따옴표 리터럴이거나, 영문·숫자가 섞인 8자 이상 값일 때만. `secret: true`, `token = getToken()`, `process.env.X` 같은 코드 식별자는 제외 (08 §6.5). 가림은 값(v/w 그룹)만"
     },
     {
       "id": "secret.conn_string",
@@ -65,9 +66,9 @@
       "effect": {
         "secret_present": true
       },
-      "pattern": "\\b[a-z][a-z0-9+]*://[^\\s:/@]+:[^\\s@/]+@[^\\s/]+",
+      "pattern": "\\b[a-z][a-z0-9+]*://[^\\s:/@]+:(?<v>[^\\s@/]+)@[^\\s/]+",
       "flags": "i",
-      "note": "user:pass@host 형식 접속 문자열"
+      "note": "user:pass@host 형식 접속 문자열. 가림은 비밀번호(v 그룹)만"
     },
     {
       "id": "pii.kr_rrn",

@@ -52,6 +52,8 @@ interface Compiled extends RuleDef {
   re?: RegExp;
 }
 
+export type CompiledRule = Compiled;
+
 export function compileRules(file: RulesFile): Compiled[] {
   return file.rules.map((r) => {
     if (r.kind !== "regex") return { ...r };
@@ -153,20 +155,51 @@ export function runStage1Safe(rules: Compiled[], input: Stage1Input): Stage1Resu
   }
 }
 
+export interface SecretSpan { start: number; end: number; rule: string }
+
+/** 가림 자리표시에 쓰는 짧은 이름. 점이나 대입 기호가 없어 규칙에 다시 걸리지 않는다. */
+export function secretLabel(ruleId: string): string {
+  return ruleId.replace(/^secret\./, "");
+}
+
 /**
- * secret 그룹 규칙에 걸린 구간을 `[[MASKED 규칙id]]`로 바꾼다. 분석기에는 이 텍스트를 보낸다.
- * 분석(유형·난이도 판정)에는 비밀 값이 필요 없고, 사내 게이트웨이는 비밀정보가 든 요청을 거부한다.
+ * secret 규칙에 걸린 구간. 이름 있는 그룹 v 또는 w가 있으면 그 부분만, 없으면 매치 전체.
+ * 겹치는 구간은 합친다 (앞선 규칙 이름 유지).
  */
-export function maskSecrets(rules: Compiled[], text: string): { text: string; masked: number } {
-  let out = text;
-  let masked = 0;
+export function secretSpans(rules: Compiled[], text: string): SecretSpan[] {
+  const spans: SecretSpan[] = [];
   for (const rule of rules) {
     if (rule.group !== "secret" || !rule.re) continue;
-    const re = new RegExp(rule.re.source, rule.re.flags);
-    out = out.replace(re, () => {
-      masked++;
-      return `[[MASKED ${rule.id}]]`;
-    });
+    const flags = new Set([...rule.re.flags, "d", "g"]);
+    const re = new RegExp(rule.re.source, [...flags].join(""));
+    for (const m of text.matchAll(re)) {
+      const idx = (m as RegExpMatchArray & { indices?: { groups?: Record<string, [number, number] | undefined> } }).indices;
+      const g = idx?.groups?.v ?? idx?.groups?.w;
+      const [start, end] = g ?? [m.index!, m.index! + m[0].length];
+      if (end > start) spans.push({ start, end, rule: rule.id });
+    }
   }
-  return { text: out, masked };
+  spans.sort((x, y) => x.start - y.start || y.end - x.end);
+  const merged: SecretSpan[] = [];
+  for (const sp of spans) {
+    const last = merged.at(-1);
+    if (last && sp.start < last.end) last.end = Math.max(last.end, sp.end);
+    else merged.push({ ...sp });
+  }
+  return merged;
+}
+
+/**
+ * 비밀 값을 `[[MASKED 규칙이름]]`으로 바꾼다 (번호 없음, 복원 불가). 2단 분석기 입력용.
+ * 런타임의 복원 가능한 가림은 src/secrets.ts의 SecretVault를 쓴다.
+ */
+export function maskSecrets(rules: Compiled[], text: string): { text: string; masked: number } {
+  const spans = secretSpans(rules, text);
+  let out = "";
+  let pos = 0;
+  for (const sp of spans) {
+    out += text.slice(pos, sp.start) + `[[MASKED ${secretLabel(sp.rule)}]]`;
+    pos = sp.end;
+  }
+  return { text: out + text.slice(pos), masked: spans.length };
 }

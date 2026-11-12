@@ -55,7 +55,7 @@ test("maskSecrets: 비밀 값을 규칙 id 자리표시로 바꾼다", () => {
   const text = fillTemplate("키 {{FAKE_AWS_KEY}}, 연락처 {{FAKE_PHONE}}", 4);
   const m = maskSecrets(rules, text);
   assert.equal(m.masked, 1);
-  assert.ok(m.text.includes("[[MASKED secret.aws_access_key]]"));
+  assert.ok(m.text.includes("[[MASKED aws_access_key]]"));
   assert.ok(m.text.includes("010-0000-"), "개인정보는 가리지 않는다(사내 분석기로 보낸다)");
   assert.equal(runStage1(rules, { text: m.text }).hard_constraints.secret_present, false);
 });
