@@ -16,6 +16,12 @@ export interface RuleDef {
   validator?: "luhn" | "kr_rrn_shape";
   config_key?: string;
   threshold_tokens?: number;
+  /** keywords: 영문·숫자로 시작·끝나는 키워드는 식별자 안에서 매치하지 않는다 (isConfidential, PII_FIELD 등) */
+  word_boundary?: boolean;
+  /** regex·keywords: 매치 바로 뒤가 이 패턴이면 그 매치는 무시한다 (부정 표현, 주제어 용법) */
+  unless_followed_by?: string;
+  /** regex·keywords: 매치 바로 앞이 이 패턴으로 끝나면 그 매치는 무시한다 */
+  unless_preceded_by?: string;
   effect: { data_sensitivity?: "external_ok" | "internal_only"; irreversible_side_effects?: boolean; add_capability?: Capability; secret_present?: boolean };
 }
 
@@ -50,17 +56,47 @@ export interface Stage1Result {
 
 interface Compiled extends RuleDef {
   re?: RegExp;
+  after?: RegExp;
+  before?: RegExp;
 }
 
 export type CompiledRule = Compiled;
 
+const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const ASCII_WORD = /[A-Za-z0-9_]/;
+
+/** 키워드 목록을 대소문자 무시 정규식 하나로. 매치 위치를 원문 기준으로 얻기 위해 소문자 변환 대신 i 플래그를 쓴다. */
+function keywordsRe(words: string[], boundary: boolean): RegExp | undefined {
+  const parts = words.filter((w) => w.length > 0).map((w) => {
+    let p = escapeRe(w);
+    if (boundary && ASCII_WORD.test(w[0])) p = `(?<![A-Za-z0-9_])${p}`;
+    if (boundary && ASCII_WORD.test(w.at(-1)!)) p = `${p}(?![A-Za-z0-9_])`;
+    return p;
+  });
+  return parts.length ? new RegExp(parts.join("|"), "giu") : undefined;
+}
+
 export function compileRules(file: RulesFile): Compiled[] {
   return file.rules.map((r) => {
-    if (r.kind !== "regex") return { ...r };
+    const out: Compiled = { ...r };
+    if (r.unless_followed_by) out.after = new RegExp(r.unless_followed_by, "iuy");
+    if (r.unless_preceded_by) out.before = new RegExp(`(?:${r.unless_preceded_by})$`, "iu");
+    if (r.kind === "keywords") out.re = keywordsRe(r.keywords ?? [], r.word_boundary === true);
+    if (r.kind !== "regex") return out;
     if (!r.pattern) throw new Error(`regex 규칙에 pattern 없음: ${r.id}`);
     const flags = new Set([...(r.flags ?? ""), "g", "u"]);
-    return { ...r, re: new RegExp(r.pattern, [...flags].join("")) };
+    out.re = new RegExp(r.pattern, [...flags].join(""));
+    return out;
   });
+}
+
+/** 매치 앞뒤 문맥이 예외 패턴이면 그 매치는 무시한다. */
+function exempt(rule: Compiled, text: string, start: number, end: number): boolean {
+  if (rule.after) {
+    rule.after.lastIndex = end;
+    if (rule.after.test(text)) return true;
+  }
+  return !!rule.before && rule.before.test(text.slice(Math.max(0, start - 80), start));
 }
 
 export function luhnOk(candidate: string): boolean {
@@ -85,9 +121,16 @@ export function krRrnShapeOk(candidate: string): boolean {
 }
 
 function regexHit(rule: Compiled, text: string): boolean {
-  const re = rule.re!;
+  const re = rule.re;
+  // 빈 키워드 목록만 정상. regex 규칙에 컴파일된 식이 없으면 예외로 failsafe(민감 간주)가 동작하게 한다
+  if (!re) {
+    if (rule.kind === "regex") throw new Error(`컴파일되지 않은 regex 규칙: ${rule.id}`);
+    return false;
+  }
   re.lastIndex = 0;
   for (const m of text.matchAll(re)) {
+    if (m[0].length === 0) continue;
+    if (exempt(rule, text, m.index!, m.index! + m[0].length)) continue;
     if (!rule.validator) return true;
     if (rule.validator === "luhn" && luhnOk(m[0])) return true;
     if (rule.validator === "kr_rrn_shape" && krRrnShapeOk(m[0])) return true;
@@ -95,9 +138,12 @@ function regexHit(rule: Compiled, text: string): boolean {
   return false;
 }
 
+/** 사용자 설정 목록 매칭. 영문·숫자로 시작·끝나는 항목은 식별자 안에서 매치하지 않는다 (예: "corp" ≠ "incorporated"). */
 function includesAny(text: string, words: string[]): boolean {
-  const lower = text.toLowerCase();
-  return words.some((w) => w.length > 0 && lower.includes(w.toLowerCase()));
+  const re = keywordsRe(words, true);
+  if (!re) return false;
+  re.lastIndex = 0;
+  return re.test(text);
 }
 
 function configList(markers: InternalMarkers | undefined, key: string | undefined): string[] {
@@ -111,7 +157,7 @@ function hit(rule: Compiled, input: Stage1Input): boolean {
     case "regex":
       return regexHit(rule, input.text);
     case "keywords":
-      return includesAny(input.text, rule.keywords ?? []);
+      return regexHit(rule, input.text);
     case "config_list":
       return includesAny(input.text, configList(input.internalMarkers, rule.config_key));
     case "attachment":

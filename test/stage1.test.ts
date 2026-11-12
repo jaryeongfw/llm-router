@@ -67,3 +67,32 @@ test("코드 식별자는 비밀번호 대입으로 보지 않는다", () => {
   assert.equal(runStage1(rules, { text: fillTemplate(["DB_PASSWORD", ': "{{FAKE_PASSWORD}}"'].join(""), 5) }).hard_constraints.secret_present, true);
   assert.equal(runStage1(rules, { text: fillTemplate("password={{FAKE_PASSWORD}}", 6) }).hard_constraints.secret_present, true);
 });
+
+const sens = (text: string) => runStage1(rules, { text }).hard_constraints.data_sensitivity;
+const side = (text: string) => runStage1(rules, { text }).hard_constraints.irreversible_side_effects;
+
+test("민감 키워드: 주제어 용법과 식별자 안은 잡지 않는다", () => {
+  for (const t of ["개인정보 마스킹 유틸 함수 만들어 줘", "PII 탐지 정규식 테스트 작성", "개인정보 보호법 요약해 줘", "isConfidential 플래그 이름을 바꿔 줘", "CONFIDENTIAL_FLAG 상수를 지워 줘", "add a PII redaction helper"]) {
+    assert.equal(sens(t), "external_ok", t);
+  }
+});
+
+test("민감 키워드: 데이터를 가리키거나 처리를 요청하면 그대로 잡는다", () => {
+  for (const t of ["개인정보 마스킹해 줘: 아래 명단", "고객 정보 테이블 조회 쿼리가 느려요", "PII가 포함된 로그야", "CONFIDENTIAL: Q3 plan 요약", "customer data export 결과 정리", "대외비 마스킹 함수"]) {
+    assert.equal(sens(t), "internal_only", t);
+  }
+});
+
+test("부작용: 부정 표현은 제외, 다른 실행 요청은 그대로", () => {
+  for (const t of ["git push는 하지 말고 로컬 커밋까지만 해 줘", "운영 배포는 하지 말고 스테이징까지만", "do not git push", "마이그레이션 실행하지 마", "DB 삭제하면 안 돼"]) assert.equal(side(t), false, t);
+  for (const t of ["git push 해 줘", "git push 하지 말고 바로 운영 배포해 줘", "프로덕션 배포까지 해 줘", "마이그레이션 실행해"]) assert.equal(side(t), true, t);
+});
+
+test("사용자 설정 키워드·도메인도 단어 경계로 매치한다", () => {
+  const m = { domains: ["corp.internal"], path_prefixes: [], keywords: ["atlas"] };
+  const hit = (t: string) => runStage1(rules, { text: t, internalMarkers: m }).rule_hits;
+  assert.deepEqual(hit("Atlas 프로젝트 일정"), ["internal_marker.user_keywords"]);
+  assert.deepEqual(hit("wiki.corp.internal 문서"), ["internal_marker.domains"]);
+  assert.deepEqual(hit("atlassian 연동 설정"), []);
+  assert.deepEqual(hit("notcorp.internal 문서"), []);
+});

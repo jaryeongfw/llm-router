@@ -76,6 +76,18 @@
           "threshold_tokens": {
             "type": "integer"
           },
+          "word_boundary": {
+            "type": "boolean",
+            "description": "keywords: 영문·숫자 가장자리는 식별자 안에서 매치하지 않음"
+          },
+          "unless_followed_by": {
+            "type": "string",
+            "description": "매치 바로 뒤가 이 정규식이면 그 매치를 무시 (부정 표현, 주제어 용법)"
+          },
+          "unless_preceded_by": {
+            "type": "string",
+            "description": "매치 바로 앞이 이 정규식으로 끝나면 그 매치를 무시"
+          },
           "effect": {
             "type": "object",
             "additionalProperties": false,
