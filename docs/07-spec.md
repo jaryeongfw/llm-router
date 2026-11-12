@@ -59,15 +59,18 @@ test/                       stage1, stage2, analyze, decide 단위 테스트 (no
 
 | 티어 | 물리 모델 (primary → fallback) | 단가 (USD/MTok, 입력/출력/캐시읽기) | 데이터 정책 | 추론 강도 | 비고 |
 |---|---|---|---|---|---|
-| `local` | `simflow/ixi-simflow-codeadvisor` → `lgu-axeng/axengdev/qwen/qwen3-coder-next` | 종량 과금 없음 | 내부 | `off`만 | 128K, 출력 16.4K, 텍스트만 |
+| `local` | 사용자 설정 `local_models` (앞에서부터 primary → fallback) | 종량 과금 없음 | 내부 | `off` (모델별로 지정 가능) | 사내·자체 호스팅 모델 |
 | `light` | `anthropic/claude-haiku-5-5` | 0.1 / 0.5 / 0.01 (100K 초과 시 0.5 / 2.5 / 0.05) | 외부 벤더 | off, low ~ max | 1M, 이미지 |
 | `standard` | `anthropic/claude-sonnet-5-5` | 2 / 10 / 0.1 | 외부 벤더 | low ~ max | 1M, 이미지 |
 | `heavy` | `anthropic/claude-opus-5-5` | 4 / 20 / 0.2 | 외부 벤더 | low ~ max | 1M, 이미지 |
 
-- `local`의 기본 모델은 ixi-simflow다. 사용자 평가로 qwen3-coder-next보다 우수하고, 도구 호출을 확인했다(2턴 왕복 1.9초, 2026-11-11). lgu-axeng는 티어 안의 대체 모델이다. 2026-11-11 현재 네트워크에서 503(사이트 차단)을 돌려준다.
-- 측정 전용 후보(라우팅 대상 아님): `anthropic/claude-fable-5-2`(8 / 40 / 0.2, 최상위 후보), `lgu-axeng/axengdev/openai/gpt-oss-120b`. 시드 벤치마크에서 독립적 이득이 보이면 티어로 승격한다(06 §5.2).
+- `local` 티어는 저장소 기본 설정에 **자리표시(`local/default`)만** 있다. 런타임이 사용자 설정 `local_models` 중 지금 쓸 수 있는 모델로 바꾼다.
+  - 목록이 비었거나 모두 쓸 수 없으면 local 티어는 비어 있다.
+  - 그러면 사내 전용 데이터(개인정보·사내 표식)가 든 요청은 배정할 티어가 없어 차단된다(§6.2-6).
+- local 모델은 도구 호출을 지원해야 한다. 추론형 모델(사고 과정을 먼저 출력)이면 `analyzer.max_tokens`를 넉넉히 둔다(08 §8).
+- 측정 전용 후보(라우팅 대상 아님): `anthropic/claude-fable-5-2`(8 / 40 / 0.2, 최상위 후보). 시드 벤치마크에서 독립적 이득이 보이면 티어로 승격한다(06 §5.2).
 - 제외한 모델: Anthropic 4.x 세대와 sonnet-5, opus-5. 같은 급의 5.5보다 단가가 같거나 높다(예: opus-5는 5 / 25 / 0.5, opus-5-5는 4 / 20 / 0.2).
-- 분석기 모델: `simflow/ixi-simflow-codeadvisor`(기본, local 티어와 겸용), `lgu-axeng/…/gemma-4-e4b`, `…/gemma-4-e2b`(대체). 모두 사내 모델이므로 민감도 판정 전에 호출해도 된다.
+- 판단 모델(2단 분석기)은 §5.1의 순서로 자동 선택한다. 기본은 local 모델이다.
 - 티어 순서(비용 오름차순): `local < light < standard < heavy`. 상향은 이 순서를 따른다. 단, 민감 태스크는 `local`에서 더 올라가지 않는다(§6.3).
 - 추론 강도는 카탈로그의 `thinkingLevelMap` 기준이다(`null` = 미지원). 네 외부 모델 모두 `supportsMidConvoEffort`가 켜져 있다(§13 S6).
 - 단가는 pi 카탈로그(1.5.2) 값이다. 실제 비용은 항상 응답의 `usage`로 다시 계산한다.
@@ -94,8 +97,8 @@ test/                       stage1, stage2, analyze, decide 단위 테스트 (no
  │   - 컨텍스트 신호: 쿼리의 경로·심볼로 rg 검색 → 매치 파일 수, 대상 파일 크기
  │
  ② 2단 분석 (목표 < 3s). 분석기는 1단 민감도 판정으로 고른다
- │   - external_ok   → anthropic/claude-haiku-5-5 (thinking off), 실패 시 ixi-simflow
- │   - internal_only → ixi-simflow, 실패 시 gemma-e4b → gemma-e2b (사내 모델만)
+ │   - external_ok   → [analyzer.model] → local 모델들 → Claude 자동 선택 (analyzer.prefer = "claude"면 Claude 먼저)
+ │   - internal_only → [analyzer.model이 local이면] → local 모델들만. 없으면 2단을 건너뛴다
  │   - 비밀정보는 [[MASKED 이름]]으로 가린 텍스트를 보낸다 (사내 게이트웨이는 비밀정보 요청을 403으로 거부한다)
  │   - 출력: 태스크 유형(도메인, 행위), 차원 점수, 난이도 분석 문장, 신뢰도
  │   - 2단이 민감 의심을 내면 민감으로 올린다(OR 결합). 단, 비밀정보를 이미 가린 요청이면 반영하지 않는다(src/analyze.ts)
@@ -104,7 +107,11 @@ test/                       stage1, stage2, analyze, decide 단위 테스트 (no
 ```
 
 - 1단은 외부 호출을 하지 않는다. **2단은 1단이 internal_only로 판정한 요청을 외부 모델에 보내지 않는다.** 외부 classifier(Jev 등)는 v0.1에서 쓰지 않는다.
-- 분석기 선택 근거(08 §6): haiku-5-5는 지연 p50 2.1초(CLI 포함), 3초 이내 90%. ixi-simflow는 p50 6.9초이고 서버가 요청을 직렬 처리한다.
+- **Claude 자동 선택** (`analyzer.claude_auto`, `src/models.ts` `pickClaudeAnalyzer`)
+  - 쓸 수 있는(자격 증명이 있는) 모델 중 haiku 계열 최신 버전을 고른다. 날짜 없는 별칭과 `anthropic` 공급자를 우선한다.
+  - haiku가 없으면 입력 단가가 가장 싼 Claude 모델을 고른다. thinking은 off다.
+- 판단 모델이 시간 상한(`analyzer.timeout_ms`, 기본 12초)을 넘거나 실패하면 다음 후보로 넘어간다. 본문 없이 출력 상한에 걸린 응답도 실패로 본다.
+- 지연 참고(08 §6, §8): local 판단 모델은 2단 한 번에 수 초(측정한 사내 모델 p50 약 6~7초)가 걸렸다. Claude haiku는 약 1.5~2초였다. **판단은 쿼리마다 한 번** 일어나므로 이 지연이 쿼리마다 첫 응답 앞에 붙는다. 지연이 중요하면 `analyzer.prefer: "claude"`로 바꾼다.
 - 2단이 실패하면(시간 초과, 파싱 실패, 서버 불가) 1단 결과만으로 진행한다. 차원은 모두 `null`, `confidence = 0`으로 둔다.
 - 1단 민감도 판정 자체가 예외로 실패하면 **민감으로 간주**한다.
 
@@ -196,7 +203,7 @@ test/                       stage1, stage2, analyze, decide 단위 테스트 (no
 
 ### 6.5 비밀정보 정책
 
-사내 게이트웨이(ixi-simflow)는 비밀정보 형식이 든 요청을 403으로 거부한다(08 §3.2). 이것을 회사의 통제 의도로 보고, **비밀 값을 어떤 모델에도 보내지 않는다**(2026-11-12 결정, 08 §7).
+측정한 사내 게이트웨이는 비밀정보 형식이 든 요청을 403으로 거부했다(08 §3.2). 이것을 회사의 통제 의도로 보고, **비밀 값을 어떤 모델에도 보내지 않는다**(2026-11-12 결정, 08 §7).
 
 **구현** (`src/secrets.ts`, `src/secret-guard.ts`, `src/index.ts`)
 
@@ -223,7 +230,7 @@ test/                       stage1, stage2, analyze, decide 단위 테스트 (no
 | `block` | 결정하지 않고 사용자에게 비밀정보를 지우라고 알린다 |
 
 **검증** (`node scripts/e2e-secret-guard.ts`, 08 §7)
-- haiku-5-5와 ixi-simflow 모두 `.env` 읽기, 값을 써야 하는 명령 실행, 파일 수정에서 공급자 요청 본문에 비밀 값이 0회 들어갔다.
+- Claude haiku와 local 모델 모두 `.env` 읽기, 값을 써야 하는 명령 실행, 파일 수정에서 공급자 요청 본문에 비밀 값이 0회 들어갔다.
 - 가림 없는 대조군에서는 유출이 검출됐다.
 
 ## 7. 런타임 (pi virtual model)
@@ -240,12 +247,13 @@ test/                       stage1, stage2, analyze, decide 단위 테스트 (no
 ### 7.2 상태 (schema: router-state)
 
 ```json
-{ "v": 1, "task_id": "t_…", "tier": "standard", "model": "anthropic/claude-sonnet-5-5",
+{ "v": 1, "task_id": "t_…", "query_id": "q_…", "scope": "query", "tier": "standard", "model": "anthropic/claude-sonnet-5-5",
   "thinking": "high", "operating_point": "balanced",
   "decided_at": "…", "decision_ref": "d_…", "mode": "A", "pinned_by": "router" }
 ```
 
-- 사용자가 태스크 도중에 virtual 레벨(운영점)을 바꿔도 현재 태스크의 고정값은 바뀌지 않는다. 다음 태스크부터 적용한다.
+- 결정 단위는 **사용자 쿼리**다(`pin_scope: "query"`, 기본). 쿼리 안의 도구 루프와 재시도는 그 쿼리의 결정을 유지한다. `pin_scope: "session"`이면 세션 첫 쿼리의 결정을 끝까지 유지한다.
+- 사용자가 virtual 레벨(운영점)을 바꾸면 다음 쿼리부터 적용된다.
 
 - `pinned_by`: `router` | `user`(`/router pin`) | `escalation`.
 
@@ -256,18 +264,18 @@ test/                       stage1, stage2, analyze, decide 단위 테스트 (no
 | `reason == "direct"` | `config.direct_tier`(기본 `local`, 민감 세션이 아니면 `light`)의 모델. 상태 반환 안 함 |
 | `reason == "retry"` 이고 `failed` 있음 | `failed.model` 그대로. 단, 오류가 컨텍스트 초과면 같은 데이터 정책 안에서 더 큰 컨텍스트 티어로 |
 | `reason == "continuation"` | `previous.model`과 `previous.thinkingLevel`, 없으면 `state.model`과 `state.thinking` |
-| `reason == "user"` 이고 `state` 없음 | **분석 → 결정 → 새 상태 반환** |
-| `reason == "user"` 이고 `state` 있음 | `state.model` 유지(같은 태스크로 간주). 새 태스크는 `/router new-task`나 새 세션으로만 시작(06 §5.5 선택지 1) |
+| `reason == "user"` **쿼리마다 분석 → 결정 → 새 상태 반환** (2026-11-12 변경). 단, `pin_scope: "session"`이거나 사용자가 고정(`pinned_by != router`)했으면 `state.model` 유지 |. **고정 중이라도 1단 규칙은 쿼리마다 검사**하고, 사내 전용 데이터인데 고정 모델이 local이 아니면 그 쿼리는 다시 결정한다 |
 | `state.model`이 더 이상 자격 증명 없음 | 같은 티어의 대체 모델, 없으면 한 단계 상위(같은 데이터 정책 안). 결정 로그에 `fallback_reason` |
 
-- `route()`는 예외를 던지지 않는다. 내부 오류는 `config.default_tier`로 처리하고 기록한다. 단, 민감 세션이면 `local`로 처리한다.
-- 분석과 결정에 걸리는 시간 상한은 `config.decision_timeout_ms`(기본 4000)이다. 넘으면 1단 결과만으로 결정한다.
+- 필수 제약을 만족하는 티어가 없으면 `route()`가 사유를 담아 예외를 던진다. 그러면 그 요청은 오류 응답으로 끝난다(fail-closed). 예: 사내 전용 데이터가 있는데 local 모델이 없는 경우.
+- 2단이 실패하면 1단 결과만으로 결정한다. 이때 난이도를 모르므로 기본 티어(heavy)가 된다.
+- 쿼리별 분배의 실제 동작은 `node scripts/e2e-routing.ts [--no-local]`로 확인한다(08 §8).
 
 ### 7.4 명령
 
 | 명령 | 동작 |
 |---|---|
-| `/router status` | 현재 티어, 모델, 결정 이유, 분석 요약, 누적 비용 |
+| `/router status` | 마지막 쿼리의 티어, 모델, 추론 강도, 조회표 칸과 보정, 판단 모델과 지연 (구현됨) |
 | `/router pin <tier>[:<thinking>]` | 고정 티어와 추론 강도를 바꾼다. 추론 강도만 바꾸려면 `/router pin :high`. 민감 세션에서 외부 티어는 거부. 하향은 즉시, **상향은 경고 후 확인**(캐시 손실, 06 §2.1) |
 | `/router new-task` | 상태를 지워 다음 사용자 메시지에서 다시 분석 |
 | `/router escalate [--thinking]` | §6.3의 다음 단계를 정한다. 첫 사용자 메시지 앞에서 fork하고, 그 단계를 고정한 상태로 같은 프롬프트를 다시 보낸다. 작업 트리 변경이 있으면 먼저 확인을 받는다(git stash 또는 체크포인트) |
@@ -297,11 +305,9 @@ test/                       stage1, stage2, analyze, decide 단위 테스트 (no
   "side_effect_floor": "heavy",
   "low_confidence": 0.5,
   "decision_timeout_ms": 4000,
-  "analyzer": {
-    "external_ok":   { "model": "anthropic/claude-haiku-5-5", "fallbacks": ["simflow/ixi-simflow-codeadvisor"], "thinking": "off" },
-    "internal_only": { "model": "simflow/ixi-simflow-codeadvisor", "fallbacks": ["lgu-axeng/axengdev/google/gemma-4-e4b", "lgu-axeng/axengdev/google/gemma-4-e2b"] },
-    "timeout_ms": 3000, "mask_secrets": true
-  },
+  "pin_scope": "query",
+  "local_models": [],
+  "analyzer": { "prefer": "local", "model": null, "claude_auto": true, "timeout_ms": 12000, "max_tokens": 4096, "mask_secrets": true },
   "secret_policy": { "mode": "mask", "tier": "heavy" },
   "verifiable_down": { "max_difficulty": 0, "confident_max_difficulty": 0, "min_confidence": 1 },
   "virtual_levels": { "low": "economy", "medium": "balanced", "high": "quality" },
@@ -409,8 +415,8 @@ pi --mode json --no-session -ne -ns -np -nc --no-mcp \
 | S4 | `/router escalate`의 작업 트리 복원 방식 (stash / 체크포인트 / worktree) | 구현 중 |
 | S5 | 루브릭 판정 모델의 신뢰도 (사람 판정과 일치율). 판정 모델(sonnet-5-5)이 standard 티어와 같아 자기 평가 편향을 점검해야 한다 | 첫 측정 후 표본 20건 수동 대조 |
 | S6 | 태스크 안에서 추론 강도를 바꿀지(같은 모델 유지). 네 외부 모델 모두 `supportsMidConvoEffort`를 지원한다. 캐시 영향은 실측으로 확인한다 | 시드 벤치마크 후 |
-| S7 | lgu-axeng 차단(503) 지속 여부. 차단이 계속되면 local 티어의 대체 모델과 gemma 분석기도 쓸 수 없다 | 네트워크 확인 후 |
-| S8 | ~~ixi-simflow 분석 지연~~ → 측정함: 동시 1에서 p50 6.9초. external_ok 요청은 haiku-5-5로 분석하도록 바꿈(08 §6). internal_only 요청의 지연은 남은 문제 | 해결(부분) |
+| S7 | local 모델 서버가 막히거나 느릴 때의 동작 → 판단 모델은 Claude로 넘어가고, local 티어는 대체 모델 → 다음 티어 순으로 처리 | 구현됨 |
+| S8 | local 판단 모델의 지연이 쿼리마다 붙는다(측정한 사내 모델 p50 6~7초, 시간 초과 시 Claude로 넘어감). 기본은 local(사용자 결정), 지연이 중요하면 `prefer: "claude"` | 운영 중 판단 |
 | S9 | ~~비밀정보 원문을 외부 벤더로 보내도 되는가~~ → 보내지 않는다. 모든 호출에서 가림(§6.5) | 해결 |
 | S12 | 시스템 프롬프트(AGENTS.md 등)의 비밀 값은 가리지 않는다. `context_with_system`으로 확장할지 | 런타임 구현 시 |
 | S13 | 가림 규칙이 못 잡는 비밀 형식(사내 고유 토큰 등)은 그대로 나간다. 사용자 정의 패턴(config) 추가 | 운영 전 |

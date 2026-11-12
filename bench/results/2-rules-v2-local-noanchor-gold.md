@@ -1,6 +1,6 @@
 # 라우팅 판단 평가 — 2026-11-12
 
-- 분석기: `simflow/ixi-simflow-codeadvisor`, pi CLI 경유, 운영점 balanced, 비밀정보 가림 켬
+- 분석기: local 모델, pi CLI 경유, 운영점 balanced, 비밀정보 가림 켬
 - 작업: 시드 케이스 0건 × 표현 3가지 × 반복 1 = 0, 정답 세트 44
 - 비교 기준: 케이스는 **사람 라벨에 같은 결정 규칙을 적용한 결정**이다. 분석기가 라벨을 얼마나 재현하는지를 잰다. 조회표가 prior라서 라벨 결정이 "최적"이라는 뜻은 아니다.
 - 다시 채점: `routing-eval-2026-11-12T00-55-40.jsonl` (모델 재호출 없음, 현재 규칙·조회표 적용)
@@ -12,7 +12,7 @@
 | unavailable | 4.5% (2/44) |
 | ok | 95.5% (42/44) |
 | 대체 모델 사용 | 2건 |
-| 분석기별 처리 | lgu-axeng/axengdev/google/gemma-4-e2b 2, simflow/ixi-simflow-codeadvisor 42 |
+| 분석기별 처리 | local 대체 모델 2, local 모델 42 |
 | 비밀정보 가림 | 0건 |
 | 지연 p50 / p95 (CLI 시작 포함) | 7706ms / 16472ms |
 | 3초 이내 | 0.0% (0/42) |

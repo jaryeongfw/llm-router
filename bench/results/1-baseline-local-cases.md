@@ -1,6 +1,6 @@
 # 라우팅 판단 평가 — 2026-11-12
 
-- 분석기: `simflow/ixi-simflow-codeadvisor` (대체: `lgu-axeng/axengdev/google/gemma-4-e4b`, `lgu-axeng/axengdev/google/gemma-4-e2b`), pi CLI 경유, 운영점 balanced
+- 분석기: local 모델 (대체: local 대체 모델, local 대체 모델), pi CLI 경유, 운영점 balanced
 - 작업: 시드 케이스 30건 × 표현 3가지 × 반복 1 = 90, 정답 세트 0
 - 비교 기준: 케이스는 **사람 라벨에 같은 결정 규칙을 적용한 결정**이다. 분석기가 라벨을 얼마나 재현하는지를 잰다. 조회표가 prior라서 라벨 결정이 "최적"이라는 뜻은 아니다.
 - 소요: 727초
