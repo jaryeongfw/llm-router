@@ -24,7 +24,7 @@ config/
   roster.json               티어 ↔ 물리 모델, 단가, 데이터 정책     (schema: roster)
   taxonomy.json             도메인 × 행위 정의                      (schema: taxonomy)
   sensitivity-rules.json    데이터 민감도·부작용 규칙               (schema: rules)
-  routing-table.v0.json     (행위 × 난이도) → (티어, 추론 강도)   (schema: routing-table)
+  routing-table.v0.json     (행위 × 난이도 구간) → (티어, 추론 강도)   (schema: routing-table)
   llm-router.default.json   플러그인 기본 설정                     (schema: plugin-config)
 spec/schemas/*.schema.json  데이터 계약 (JSON Schema draft 2020-12 부분집합)
 bench/
@@ -41,11 +41,14 @@ scripts/
   check-cases.ts            케이스 건전성 검사 (기준 실패 → 해답 통과)
   check-rules.ts            민감도 규칙의 정답 세트 정확도 검사
   derive-hypotheses.ts      케이스 예상 (티어, 추론 강도)를 현재 조회표로 재계산
+  eval-routing.ts           라우팅 판단 평가 (2단 실제 호출 또는 저장 결과 다시 채점)
 src/
-  stage1.ts                 1단 규칙 엔진 (§5.2)
+  stage1.ts                 1단 규칙 엔진, 비밀정보 가림 (§5.2)
+  stage2.ts                 2단 분석기 프롬프트·파싱·대체 모델 (§5.3)
+  analyze.ts                1·2단 병합 (§5.1)
   decide.ts                 결정 규칙 v0 (§6), 순수 함수
   (index.ts 등)             플러그인 런타임 (§7, 다음 단계)
-test/                       stage1, decide 단위 테스트 (node:test)
+test/                       stage1, stage2, analyze, decide 단위 테스트 (node:test)
 ```
 
 ## 3. 티어와 후보 (config/roster.json)
@@ -86,14 +89,18 @@ test/                       stage1, decide 단위 테스트 (node:test)
  │   - 필요 능력: 이미지 첨부, 예상 컨텍스트 크기
  │   - 컨텍스트 신호: 쿼리의 경로·심볼로 rg 검색 → 매치 파일 수, 대상 파일 크기
  │
- ② 2단 로컬 분석 (사내 모델: ixi-simflow, 실패 시 gemma, 목표 < 3s)
- │   - 태스크 유형(도메인, 행위), 차원 점수, 난이도 분석 문장, 신뢰도
- │   - 규칙이 "민감 아님"으로 판정했더라도 로컬 모델이 민감 의심을 내면 민감으로 올린다(OR 결합)
+ ② 2단 분석 (목표 < 3s). 분석기는 1단 민감도 판정으로 고른다
+ │   - external_ok   → anthropic/claude-haiku-5-5 (thinking off), 실패 시 ixi-simflow
+ │   - internal_only → ixi-simflow, 실패 시 gemma-e4b → gemma-e2b (사내 모델만)
+ │   - 비밀정보는 [[MASKED 규칙id]]로 가린 텍스트를 보낸다 (사내 게이트웨이는 비밀정보 요청을 403으로 거부한다)
+ │   - 출력: 태스크 유형(도메인, 행위), 차원 점수, 난이도 분석 문장, 신뢰도
+ │   - 2단이 민감 의심을 내면 민감으로 올린다(OR 결합). 단, 비밀정보를 이미 가린 요청이면 반영하지 않는다(src/analyze.ts)
  │
  ③ 분석 결과 = analysis (schema: analysis)
 ```
 
-- 1단과 2단 모두 **외부 벤더 호출을 하지 않는다.** 외부 classifier(Jev 등)는 v0.1에서 쓰지 않는다.
+- 1단은 외부 호출을 하지 않는다. **2단은 1단이 internal_only로 판정한 요청을 외부 모델에 보내지 않는다.** 외부 classifier(Jev 등)는 v0.1에서 쓰지 않는다.
+- 분석기 선택 근거(08 §6): haiku-5-5는 지연 p50 2.1초(CLI 포함), 3초 이내 90%. ixi-simflow는 p50 6.9초이고 서버가 요청을 직렬 처리한다.
 - 2단이 실패하면(시간 초과, 파싱 실패, 서버 불가) 1단 결과만으로 진행한다. 차원은 모두 `null`, `confidence = 0`으로 둔다.
 - 1단 민감도 판정 자체가 예외로 실패하면 **민감으로 간주**한다.
 
@@ -101,13 +108,14 @@ test/                       stage1, decide 단위 테스트 (node:test)
 
 | 그룹 | 예 (패턴 이름) | 결과 |
 |---|---|---|
-| `secret` | private key 블록, 클라우드 액세스 키 형식, `sk-` 계열 API 키, JWT, `password=` 대입 | `data_sensitivity = internal_only` |
+| `secret` | private key 블록, 클라우드 액세스 키 형식, `sk-` 계열 API 키, JWT, `password=` 대입, 접속 문자열 | `secret_present = true` → §6.5 비밀정보 정책 |
 | `pii` | 주민등록번호 형식, 휴대전화 번호 형식, 이메일 주소, 카드번호(Luhn 통과) | `internal_only` |
 | `internal_marker` | 사용자 설정 내부 도메인·경로, "대외비", "고객 정보", "confidential" | `internal_only` |
 | `user_explicit` | `#local`, "외부로 보내지 마" | `internal_only` |
 | `side_effect` | "운영에 배포", "마이그레이션 실행", `git push`, "DB 삭제", `rm -rf` | `irreversible_side_effects = true` |
 | `capability` | 이미지 첨부, 컨텍스트 추정 > 100K | `required_capabilities`에 추가 |
 
+- secret 규칙을 먼저 원문에 적용한다. 나머지 규칙은 **비밀 값을 가린 텍스트**에 적용한다. 접속 문자열 `user:pw@host`가 이메일 규칙에 다시 걸려 잘못 차단되는 것을 막기 위해서다.
 - 규칙은 **재현율 우선**이다. 오탐(괜히 로컬로 가는 것)은 비용·품질 손실이고, 미탐은 유출이기 때문이다.
 - 목표: 정답 세트 기준 `secret`·`pii` 재현율 1.0, 민감도 정밀도 ≥ 0.8.
 
@@ -119,9 +127,11 @@ test/                       stage1, decide 단위 테스트 (node:test)
 
 ### 6.1 조회표 (config/routing-table.v0.json)
 
-- 키: `(action, difficulty)`.
+- 키: `(action, band)`. **band는 난이도 구간이다: easy = 0~1, hard = 2~3** (08 §4 A1).
+  - 분석기 난이도는 거의 항상 라벨과 ±1 이내였다(98.9%). 그런데 4단계를 그대로 키로 쓰면 그 1이 티어 차이로 커졌다.
 - 값: 최저 티어, 그 티어의 **추론 강도**, 근거(`prior` | `measured`), 표본 수 n, 관측 성공률.
-- 같은 티어 안에서도 난이도에 따라 추론 강도를 다르게 둔다. 예: debug/1 = `light:medium`, debug/2 = `standard:high`.
+- 세부 난이도(0~3)는 추론 강도에만 쓴다. 구간 상단(1 또는 3)이면 +1이다(§6.4).
+  - 예: debug/hard에서 난이도 2는 `standard:high`, 3은 `standard:xhigh`.
 - 추론 강도는 티어 기본 모델이 지원하는 값이어야 한다. `npm run validate`가 검사한다.
 - v0.1 출하 값은 **전부 `prior`(가설)**이다. 시드 벤치마크 측정 후 n ≥ 30인 칸만 `measured`로 바꾼다(06 §5.7).
 
@@ -136,13 +146,16 @@ test/                       stage1, decide 단위 테스트 (node:test)
    - internal_only → 후보 = {data_policy == internal}
    - required_capabilities ⊄ 티어 능력 → 제외
    - 예상 컨텍스트 > 티어 컨텍스트 × 0.8 → 제외
-3. 기본 티어 = table[(action, difficulty)] (없으면 table[("*", difficulty)], 그것도 없으면 config.default_tier)
+   - secret_present → 후보 = {config.secret_policy.tier} (§6.5)
+3. 기본 티어 = table[(action, band)] (없으면 table[("*", band)], 난이도를 모르면 config.default_tier)
 4. 보정 (순서대로, 각각 최대 한 단계)
    a. irreversible_side_effects → 기본 티어를 최소 config.side_effect_floor(기본 heavy)로
    b. scope ≥ 3 또는 matched_files > 20 → +1
    c. confidence < config.low_confidence (기본 0.5) → +1
-   d. verifiability == 0 이고 difficulty ≤ 1 → −1 (검증 가능하면 싸게 시도, 03 §3.6)
+   d. verifiability == 0 이고 difficulty == 0 → −1 (검증 가능하면 싸게 시도, 03 §3.6)
       단, a가 적용됐거나 운영점이 quality면 하지 않는다
+      조건은 config.verifiable_down으로 조정한다. 난이도 1까지 넓히거나 신뢰도 조건을 붙이면
+      그 경계에서 결정이 흔들렸다(08 §6: 티어 일치 62~66% 대 74%, 안정성 77% 대 83%)
 5. 후보 중 "목표 티어 이상인 가장 싼 티어" 선택. 티어 안에서는 primary, 쓸 수 없으면 fallback 모델
 6. 그런 티어가 없으면 (예: 민감 + heavy 필요)
    → 후보 중 가장 높은 티어를 선택하고 decision.capped = true, 사용자에게 경고
@@ -152,21 +165,6 @@ test/                       stage1, decide 단위 테스트 (node:test)
 8. ambiguity == 3 → 라우팅은 하되 decision.ask_user = true (되묻기 안내)
 ```
 
-### 6.4 추론 강도
-
-추론 강도는 티어와 함께 **태스크마다 정하고, 태스크 동안 고정**한다.
-
-결정 순서 (단계 = `off < minimal < low < medium < high < xhigh < max`):
-1. 기본값 = 조회표 칸의 `thinking`. 난이도를 모르면 기본 티어 모델의 `default_thinking`.
-2. `capabilities.reasoning ≥ thinking_rules.reasoning_up_at`(기본 3) → +1 (`reasoning_up`)
-3. 운영점 보정: economy −1, balanced 0, quality +1 (`operating_point_shift`)
-4. 상한 `thinking_rules.max_thinking`(기본 xhigh). `max`는 사용자가 `/router pin`으로만 고를 수 있다.
-5. 선택한 모델이 지원하지 않는 값이면 가장 가까운 지원 값으로 맞춘다. 거리가 같으면 높은 쪽을 고른다(`clamped_to_model`). 사내 모델은 항상 `off`(`local_off`).
-
-추가 규칙:
-- 티어 보정(§6.2-4)으로 티어가 바뀌어도 추론 강도 이름은 그대로 두고, 5번에서 새 모델에 맞춘다.
-- 어느 쪽이 나은지는 측정으로 정한다(§10.3). "티어를 올리는 것"(예: sonnet:high → opus:medium)과 "추론 강도를 올리는 것"(예: sonnet:medium → sonnet:high)이 대상이다.
-
 ### 6.3 상향 순서
 
 - 비민감: `local → light → standard → heavy`.
@@ -175,6 +173,33 @@ test/                       stage1, decide 단위 테스트 (node:test)
   - `heavy`에서는 추론 강도를 한 단계 올린다(최대 max).
   - `/router escalate --thinking`은 티어를 유지하고 추론 강도만 올린다.
 - 민감: `local`에서 상향하지 않는다. 상향을 요청하면 거부 사유를 보여 준다. 티어 안의 대체 모델 전환은 상향이 아니다.
+
+### 6.4 추론 강도
+
+추론 강도는 티어와 함께 **태스크마다 정하고, 태스크 동안 고정**한다.
+
+결정 순서 (단계 = `off < minimal < low < medium < high < xhigh < max`):
+1. 기본값 = 조회표 칸의 `thinking`. 난이도를 모르면 기본 티어 모델의 `default_thinking`.
+2. 난이도가 구간 상단(easy의 1, hard의 3)이면 +1 (`difficulty_up`)
+3. `capabilities.reasoning ≥ thinking_rules.reasoning_up_at`(기본 3) → +1 (`reasoning_up`)
+4. 운영점 보정: economy −1, balanced 0, quality +1 (`operating_point_shift`)
+5. 상한 `thinking_rules.max_thinking`(기본 xhigh). `max`는 사용자가 `/router pin`으로만 고를 수 있다.
+6. 선택한 모델이 지원하지 않는 값이면 가장 가까운 지원 값으로 맞춘다. 거리가 같으면 높은 쪽을 고른다(`clamped_to_model`). 사내 모델은 항상 `off`(`local_off`).
+
+추가 규칙:
+- 티어 보정(§6.2-4)으로 티어가 바뀌어도 추론 강도 이름은 그대로 두고, 6번에서 새 모델에 맞춘다.
+- 어느 쪽이 나은지는 측정으로 정한다(§10.3). "티어를 올리는 것"(예: sonnet:high → opus:medium)과 "추론 강도를 올리는 것"(예: sonnet:medium → sonnet:high)이 대상이다.
+
+### 6.5 비밀정보 정책
+
+- 사내 게이트웨이(ixi-simflow)는 비밀정보 형식이 든 요청을 403으로 거부한다. lgu-axeng는 현재 차단되어 있다. 그래서 비밀정보 태스크는 사내 티어로 처리할 수 없다(08 §3.2).
+- 사용자 결정(2026-11-12): **heavy(opus-5-5)로 시도하고, 실패하면 차단한다.** opus-5-5는 가짜 키가 든 요청을 정상 처리했다(3.0초).
+- 동작:
+  - `secret_present`이면 후보를 `config.secret_policy.tier`(기본 heavy)로 제한한다. 난이도와 무관하다.
+  - 2단 분석기에는 가린 텍스트를 보낸다. 실행 모델(opus)에는 원문을 보낸다.
+  - 실행이 실패하거나 거부되면(`on_failure: block`) 사용자에게 비밀정보를 지우고 다시 요청하라고 알린다. 다른 티어로 대체하지 않는다.
+  - 비밀정보와 사내 전용 데이터(개인정보 등)가 함께 있으면 후보가 없다. 결정 실패로 처리하고 같은 안내를 한다.
+- 이 정책은 비밀정보가 외부 벤더(Anthropic)로 전송됨을 뜻한다. 원문 비밀정보를 외부로 보내지 않아야 하는 환경이면 `secret_policy`를 바꿔야 한다. 이 경우 기본값은 차단이다(§13 S9).
 
 ## 7. 런타임 (pi virtual model)
 
@@ -247,9 +272,13 @@ test/                       stage1, decide 단위 테스트 (node:test)
   "side_effect_floor": "heavy",
   "low_confidence": 0.5,
   "decision_timeout_ms": 4000,
-  "analyzer": { "model": "simflow/ixi-simflow-codeadvisor",
-                "fallbacks": ["lgu-axeng/axengdev/google/gemma-4-e4b", "lgu-axeng/axengdev/google/gemma-4-e2b"],
-                "timeout_ms": 3000 },
+  "analyzer": {
+    "external_ok":   { "model": "anthropic/claude-haiku-5-5", "fallbacks": ["simflow/ixi-simflow-codeadvisor"], "thinking": "off" },
+    "internal_only": { "model": "simflow/ixi-simflow-codeadvisor", "fallbacks": ["lgu-axeng/axengdev/google/gemma-4-e4b", "lgu-axeng/axengdev/google/gemma-4-e2b"] },
+    "timeout_ms": 3000, "mask_secrets": true
+  },
+  "secret_policy": { "tier": "heavy", "on_failure": "block" },
+  "verifiable_down": { "max_difficulty": 0, "confident_max_difficulty": 0, "min_confidence": 1 },
   "virtual_levels": { "low": "economy", "medium": "balanced", "high": "quality" },
   "operating_points": {
     "economy":  { "thinking_shift": -1, "allow_verifiable_down": true,  "tier_shift": 0 },
@@ -356,4 +385,7 @@ pi --mode json --no-session -ne -ns -np -nc --no-mcp \
 | S5 | 루브릭 판정 모델의 신뢰도 (사람 판정과 일치율). 판정 모델(sonnet-5-5)이 standard 티어와 같아 자기 평가 편향을 점검해야 한다 | 첫 측정 후 표본 20건 수동 대조 |
 | S6 | 태스크 안에서 추론 강도를 바꿀지(같은 모델 유지). 네 외부 모델 모두 `supportsMidConvoEffort`를 지원한다. 캐시 영향은 실측으로 확인한다 | 시드 벤치마크 후 |
 | S7 | lgu-axeng 차단(503) 지속 여부. 차단이 계속되면 local 티어의 대체 모델과 gemma 분석기도 쓸 수 없다 | 네트워크 확인 후 |
-| S8 | ixi-simflow를 분석기와 local 티어에 함께 쓸 때 분석 지연(p95 < 3s)과 동시 호출 한도 | 2단 분석기 구현 후 |
+| S8 | ~~ixi-simflow 분석 지연~~ → 측정함: 동시 1에서 p50 6.9초. external_ok 요청은 haiku-5-5로 분석하도록 바꿈(08 §6). internal_only 요청의 지연은 남은 문제 | 해결(부분) |
+| S9 | 비밀정보 원문을 외부 벤더로 보내도 되는가 (§6.5). 사내 보안 정책 확인 필요 | 운영 전 |
+| S10 | 사내 모델 호출 시 403·503은 재시도하지 않기. pi의 에이전트 수준 재시도(기본 3회)가 실패를 30초로 늘렸다. 플러그인은 `ctx.modelRegistry`로 직접 호출하므로 재시도 동작을 따로 확인한다 | 런타임 구현 시 |
+| S11 | 난이도 구간 경계(1↔2) 혼동이 여전히 결정 차이의 주원인(구간 불일치 20%) | 결과 기준 평가 후 |

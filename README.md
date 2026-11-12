@@ -17,6 +17,7 @@
 | [docs/05-lessons-and-open-questions.md](docs/05-lessons-and-open-questions.md) | 문헌에서 얻은 교훈, 열린 질문, 다음 단계 |
 | [docs/06-literature-update-pi-plugin.md](docs/06-literature-update-pi-plugin.md) | 본문 정독 결과, 신규 문헌, pi API 대응, 기존 pi 라우터, 설계 변경 제안 |
 | [docs/07-spec.md](docs/07-spec.md) | **스펙 v0.1**: 티어, 분석기, 결정 규칙, 런타임, 기록, 시드 벤치마크, 수용 기준 |
+| [docs/08-routing-eval.md](docs/08-routing-eval.md) | 라우팅 판단 평가: 분석기 정확도, 결정 일치, 안정성, 지연. 결정 규칙 v2와 분석기 선택 근거 |
 | [docs/references.md](docs/references.md) | 참고 문헌 목록과 검토 수준 |
 
 ## 저장소 구성
@@ -25,11 +26,12 @@
 |---|---|
 | `config/` | 티어 구성(roster), 분류 체계, 민감도 규칙, 조회표 v0, 플러그인 기본 설정 |
 | `spec/schemas/` | 데이터 계약 (JSON Schema) |
-| `src/` | `stage1.ts`(1단 규칙 엔진), `decide.ts`(결정 규칙) |
+| `src/` | `stage1.ts`(1단 규칙, 비밀정보 가림), `stage2.ts`(2단 분석기 프롬프트·파싱), `analyze.ts`(1·2단 병합), `decide.ts`(결정 규칙) |
 | `bench/fixtures/` | 합성 저장소 4개: orders-service, ui-utils, sales-reports, ops-scripts |
 | `bench/cases/` | 실행형 시드 케이스 30건 (setup / hidden / solution / mutants) |
 | `bench/analyzer/gold.jsonl` | 분석기 정답 세트 44건 (민감 값은 템플릿) |
-| `scripts/` | 데이터 검증, 케이스 건전성 검사, 규칙 정확도 검사, 예상값 재계산 |
+| `scripts/` | 데이터 검증, 케이스 건전성 검사, 규칙 정확도 검사, 예상값 재계산, 라우팅 판단 평가 |
+| `bench/results/` | 평가 결과 요약 (원시 기록 `raw/`는 git 제외) |
 
 티어: `local`(ixi-simflow → lgu-axeng 대체) < `light`(haiku-5-5) < `standard`(sonnet-5-5) < `heavy`(opus-5-5). 측정 전용: fable-5-2.
 
@@ -44,10 +46,12 @@ npm run check:rules   # 민감도 규칙 정확도 (정답 세트)
 npm run check:cases   # 시드 케이스 건전성 (기준 실패 → 해답 통과, 돌연변이 제거)
 npm run check         # 위 세 가지 전부
 npm run derive        # 조회표 변경 후 케이스 예상 (티어, 추론 강도) 재계산
+node scripts/eval-routing.ts --analyzer policy   # 라우팅 판단 평가 (2단 분석기 실제 호출)
+node scripts/eval-routing.ts --rescore bench/results/raw/<파일>   # 모델 재호출 없이 현재 규칙으로 다시 채점
 ```
 
 ## 상태
 
-- 단계: 스펙 v0.1과 시드 데이터 완성. 다음은 플러그인 런타임(`registerVirtualModel`)과 시드 벤치마크 실행기다.
+- 단계: 스펙 v0.1, 시드 데이터, 1·2단 분석기, 결정 규칙 v2 완성. 라우팅 판단 평가 결과는 티어 일치 74~80%, 표현 변형 간 안정성 73~83%다(docs/08). 다음은 결과 기준 평가(실제 실행)와 플러그인 런타임이다.
 - 조회표는 전부 가설값(prior)이다. 시드 벤치마크로 측정해 교체한다.
 - 핵심 논문 8편은 본문을 검토했고, 나머지는 arXiv 초록 기준이다. 검토 수준은 `docs/references.md`에 표시했다.
