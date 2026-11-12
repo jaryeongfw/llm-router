@@ -4,8 +4,19 @@
   "private": true,
   "description": "pi 플러그인: 태스크를 분석해 충분히 잘하는 가장 싼 모델 티어에 고정 배정한다",
   "type": "module",
+  "keywords": [
+    "pi-package",
+    "pi-extension",
+    "router",
+    "model-routing"
+  ],
   "engines": {
     "node": ">=22.18"
+  },
+  "pi": {
+    "extensions": [
+      "./src/index.ts"
+    ]
   },
   "scripts": {
     "validate": "node scripts/validate-data.ts",
