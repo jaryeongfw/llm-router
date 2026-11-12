@@ -75,12 +75,12 @@ test("quality 운영점에서는 verifiable_down을 하지 않음", () => {
   assert.equal(run({ difficulty: 0, verifiability: 0 }, "quality").tier, "light");
 });
 
-test("민감 데이터는 사내 티어로 제한되고 capped 표시", () => {
+test("민감 데이터는 local 티어로 제한되고 capped 표시", () => {
   const d = run({ sensitive: true, difficulty: 3 });
   assert.deepEqual([d.tier, d.model, d.capped], ["local", "acme/local-coder", true]);
 });
 
-test("사내 기본 모델을 쓸 수 없으면 티어 내 대체 모델", () => {
+test("로컬 기본 모델을 쓸 수 없으면 티어 내 대체 모델", () => {
   const d = decide(analysis({ sensitive: true }), roster, table, cfg, "balanced", (ref) => ref !== "acme/local-coder");
   assert.equal(d.model, "acme/local-backup");
   assert.ok(d.fallback_reason);
@@ -94,10 +94,10 @@ test("비밀정보 mask(기본): 티어는 평소대로 (런타임이 가림)", 
   const secret = run({ secret: true, difficulty: 0, verifiability: 0 });
   assert.equal(secret.tier, plain.tier);
   assert.ok(!secret.adjustments.includes("secret_policy"));
-  assert.equal(run({ secret: true, sensitive: true }).tier, "local", "개인정보와 함께 있어도 사내 티어로 (가린 뒤 처리)");
+  assert.equal(run({ secret: true, sensitive: true }).tier, "local", "개인정보와 함께 있어도 local 티어로 (가린 뒤 처리)");
 });
 
-test("비밀정보 heavy: 난이도와 무관하게 heavy, 사내 전용과 겹치면 결정 실패", () => {
+test("비밀정보 heavy: 난이도와 무관하게 heavy, 로컬 전용과 겹치면 결정 실패", () => {
   for (const difficulty of [0, 2]) {
     const d = decide(analysis({ secret: true, difficulty, verifiability: 0 }), roster, table, withPolicy("heavy"));
     assert.deepEqual([d.tier, d.model], ["heavy", "anthropic/claude-opus-5-5"]);
@@ -116,7 +116,7 @@ test("비가역 부작용은 하한 티어(heavy)", () => {
   assert.ok(!d.adjustments.includes("verifiable_down"));
 });
 
-test("이미지 입력이 필요하면 사내 티어 제외", () => {
+test("이미지 입력이 필요하면 local 티어 제외", () => {
   assert.equal(run({ action: "explain", difficulty: 0, caps: ["image_input"] }).tier, "light");
 });
 
@@ -142,7 +142,7 @@ test("지원하지 않는 추론 강도는 가까운 값으로", () => {
   assert.equal(clampThinking("minimal", ["off", "low"]), "low");
 });
 
-test("local 모델이 없으면 사내 티어가 비고, 민감 데이터는 배정 불가", () => {
+test("local 모델이 없으면 local 티어가 비고, 민감 데이터는 배정 불가", () => {
   const noLocal = resolveRoster(rd("config/roster.json") as Roster, [], catalog);
   assert.equal(noLocal.tiers.find((x) => x.id === "local")!.models.length, 0);
   assert.equal(decide(analysis({ action: "explain", difficulty: 0 }), noLocal, table, cfg).tier, "light", "local이 없으면 다음 티어");

@@ -57,16 +57,22 @@ test/                       stage1, stage2, analyze, decide 단위 테스트 (no
 
 ## 3. 티어와 후보 (config/roster.json)
 
+용어:
+- **로컬 모델**: 사용자가 직접 실행하거나 운영하는 모델(내 PC, 개인·공용 서버 등). 선택 사항이며 사용자 설정 `local_models`로 지정한다. 코드에서는 `data_policy: "internal"`이다.
+- **외부 모델**: API 공급자의 모델(현재 Anthropic Claude).
+- **로컬 전용 데이터**: 외부 모델로 보내지 않을 데이터. 개인정보, 기밀 표식(`internal_markers`, "대외비" 등), 사용자의 `#local` 표시가 해당한다. 코드에서는 `data_sensitivity: "internal_only"`이다.
+- **비밀 값**: 키·토큰·비밀번호. 로컬 전용 데이터와 별개로, 어떤 모델에도 보내지 않고 가린다(§6.5).
+
 | 티어 | 물리 모델 (primary → fallback) | 단가 (USD/MTok, 입력/출력/캐시읽기) | 데이터 정책 | 추론 강도 | 비고 |
 |---|---|---|---|---|---|
-| `local` | 사용자 설정 `local_models` (앞에서부터 primary → fallback) | 종량 과금 없음 | 내부 | `off` (모델별로 지정 가능) | 사내·자체 호스팅 모델 |
+| `local` | 사용자 설정 `local_models` (앞에서부터 primary → fallback) | 종량 과금 없음 | 로컬 | `off` (모델별로 지정 가능) | 선택 사항 |
 | `light` | `anthropic/claude-haiku-5-5` | 0.1 / 0.5 / 0.01 (100K 초과 시 0.5 / 2.5 / 0.05) | 외부 벤더 | off, low ~ max | 1M, 이미지 |
 | `standard` | `anthropic/claude-sonnet-5-5` | 2 / 10 / 0.1 | 외부 벤더 | low ~ max | 1M, 이미지 |
 | `heavy` | `anthropic/claude-opus-5-5` | 4 / 20 / 0.2 | 외부 벤더 | low ~ max | 1M, 이미지 |
 
 - `local` 티어는 저장소 기본 설정에 **자리표시(`local/default`)만** 있다. 런타임이 사용자 설정 `local_models` 중 지금 쓸 수 있는 모델로 바꾼다.
   - 목록이 비었거나 모두 쓸 수 없으면 local 티어는 비어 있다.
-  - 그러면 사내 전용 데이터(개인정보·사내 표식)가 든 요청은 배정할 티어가 없어 차단된다(§6.2-6).
+  - 그러면 로컬 전용 데이터(개인정보·기밀 표식)가 든 요청은 배정할 티어가 없어 차단된다(§6.2-6).
 - local 모델은 도구 호출을 지원해야 한다. 추론형 모델(사고 과정을 먼저 출력)이면 `analyzer.max_tokens`를 넉넉히 둔다(08 §8).
 - 측정 전용 후보(라우팅 대상 아님): `anthropic/claude-fable-5-2`(8 / 40 / 0.2, 최상위 후보). 시드 벤치마크에서 독립적 이득이 보이면 티어로 승격한다(06 §5.2).
 - 제외한 모델: Anthropic 4.x 세대와 sonnet-5, opus-5. 같은 급의 5.5보다 단가가 같거나 높다(예: opus-5는 5 / 25 / 0.5, opus-5-5는 4 / 20 / 0.2).
@@ -99,7 +105,7 @@ test/                       stage1, stage2, analyze, decide 단위 테스트 (no
  ② 2단 분석 (목표 < 3s). 분석기는 1단 민감도 판정으로 고른다
  │   - external_ok   → [analyzer.model] → local 모델들 → Claude 자동 선택 (analyzer.prefer = "claude"면 Claude 먼저)
  │   - internal_only → [analyzer.model이 local이면] → local 모델들만. 없으면 2단을 건너뛴다
- │   - 비밀정보는 [[MASKED 이름]]으로 가린 텍스트를 보낸다 (사내 게이트웨이는 비밀정보 요청을 403으로 거부한다)
+ │   - 비밀정보는 [[MASKED 이름]]으로 가린 텍스트를 보낸다 (로컬 모델 서버가 비밀정보 요청을 거부할 수 있다)
  │   - 출력: 태스크 유형(도메인, 행위), 차원 점수, 난이도 분석 문장, 신뢰도
  │   - 2단이 민감 의심을 내면 민감으로 올린다(OR 결합). 단, 비밀정보를 이미 가린 요청이면 반영하지 않는다(src/analyze.ts)
  │
@@ -111,7 +117,7 @@ test/                       stage1, stage2, analyze, decide 단위 테스트 (no
   - 쓸 수 있는(자격 증명이 있는) 모델 중 haiku 계열 최신 버전을 고른다. 날짜 없는 별칭과 `anthropic` 공급자를 우선한다.
   - haiku가 없으면 입력 단가가 가장 싼 Claude 모델을 고른다. thinking은 off다.
 - 판단 모델이 시간 상한(`analyzer.timeout_ms`, 기본 12초)을 넘거나 실패하면 다음 후보로 넘어간다. 본문 없이 출력 상한에 걸린 응답도 실패로 본다.
-- 지연 참고(08 §6, §8): local 판단 모델은 2단 한 번에 수 초(측정한 사내 모델 p50 약 6~7초)가 걸렸다. Claude haiku는 약 1.5~2초였다. **판단은 쿼리마다 한 번** 일어나므로 이 지연이 쿼리마다 첫 응답 앞에 붙는다. 지연이 중요하면 `analyzer.prefer: "claude"`로 바꾼다.
+- 지연 참고(08 §6, §8): local 판단 모델은 2단 한 번에 수 초(측정한 로컬 모델 p50 약 6~7초)가 걸렸다. Claude haiku는 약 1.5~2초였다. **판단은 쿼리마다 한 번** 일어나므로 이 지연이 쿼리마다 첫 응답 앞에 붙는다. 지연이 중요하면 `analyzer.prefer: "claude"`로 바꾼다.
 - 2단이 실패하면(시간 초과, 파싱 실패, 서버 불가) 1단 결과만으로 진행한다. 차원은 모두 `null`, `confidence = 0`으로 둔다.
 - 1단 민감도 판정 자체가 예외로 실패하면 **민감으로 간주**한다.
 
@@ -132,7 +138,7 @@ test/                       stage1, stage2, analyze, decide 단위 테스트 (no
 
 ### 5.3 2단 출력 계약
 
-로컬 모델에는 JSON만 출력하도록 지시하고, `analysis` 스키마의 `task_type`, `dimensions`, `difficulty_rationale`, `confidence`만 채우게 한다. 필수 제약은 1단이 소유하며, 2단은 민감 의심(`sensitivity_suspected: bool`)만 낸다.
+판단 모델에는 JSON만 출력하도록 지시하고, `analysis` 스키마의 `task_type`, `dimensions`, `difficulty_rationale`, `confidence`만 채우게 한다. 필수 제약은 1단이 소유하며, 2단은 민감 의심(`sensitivity_suspected: bool`)만 낸다.
 
 ## 6. 결정 규칙 v0
 
@@ -195,7 +201,7 @@ test/                       stage1, stage2, analyze, decide 단위 테스트 (no
 3. `capabilities.reasoning ≥ thinking_rules.reasoning_up_at`(기본 3) → +1 (`reasoning_up`)
 4. 운영점 보정: economy −1, balanced 0, quality +1 (`operating_point_shift`)
 5. 상한 `thinking_rules.max_thinking`(기본 xhigh). `max`는 사용자가 `/router pin`으로만 고를 수 있다.
-6. 선택한 모델이 지원하지 않는 값이면 가장 가까운 지원 값으로 맞춘다. 거리가 같으면 높은 쪽을 고른다(`clamped_to_model`). 사내 모델은 항상 `off`(`local_off`).
+6. 선택한 모델이 지원하지 않는 값이면 가장 가까운 지원 값으로 맞춘다. 거리가 같으면 높은 쪽을 고른다(`clamped_to_model`). 로컬 모델은 항상 `off`(`local_off`).
 
 추가 규칙:
 - 티어 보정(§6.2-4)으로 티어가 바뀌어도 추론 강도 이름은 그대로 두고, 6번에서 새 모델에 맞춘다.
@@ -203,7 +209,7 @@ test/                       stage1, stage2, analyze, decide 단위 테스트 (no
 
 ### 6.5 비밀정보 정책
 
-측정한 사내 게이트웨이는 비밀정보 형식이 든 요청을 403으로 거부했다(08 §3.2). 이것을 회사의 통제 의도로 보고, **비밀 값을 어떤 모델에도 보내지 않는다**(2026-11-12 결정, 08 §7).
+측정에 쓴 로컬 모델 서버는 비밀정보 형식이 든 요청을 403으로 거부했다(08 §3.2). 비밀 값은 로컬이든 외부든 모델이 알 필요가 없으므로, **비밀 값을 어떤 모델에도 보내지 않는다**(2026-11-12 결정, 08 §7).
 
 **구현** (`src/secrets.ts`, `src/secret-guard.ts`, `src/index.ts`)
 
@@ -264,10 +270,10 @@ test/                       stage1, stage2, analyze, decide 단위 테스트 (no
 | `reason == "direct"` | `config.direct_tier`(기본 `local`, 민감 세션이 아니면 `light`)의 모델. 상태 반환 안 함 |
 | `reason == "retry"` 이고 `failed` 있음 | `failed.model` 그대로. 단, 오류가 컨텍스트 초과면 같은 데이터 정책 안에서 더 큰 컨텍스트 티어로 |
 | `reason == "continuation"` | `previous.model`과 `previous.thinkingLevel`, 없으면 `state.model`과 `state.thinking` |
-| `reason == "user"` **쿼리마다 분석 → 결정 → 새 상태 반환** (2026-11-12 변경). 단, `pin_scope: "session"`이거나 사용자가 고정(`pinned_by != router`)했으면 `state.model` 유지 |. **고정 중이라도 1단 규칙은 쿼리마다 검사**하고, 사내 전용 데이터인데 고정 모델이 local이 아니면 그 쿼리는 다시 결정한다 |
+| `reason == "user"` **쿼리마다 분석 → 결정 → 새 상태 반환** (2026-11-12 변경). 단, `pin_scope: "session"`이거나 사용자가 고정(`pinned_by != router`)했으면 `state.model` 유지. **고정 중이라도 1단 규칙은 쿼리마다 검사**하고, 로컬 전용 데이터인데 고정 모델이 local이 아니면 그 쿼리는 다시 결정한다 |
 | `state.model`이 더 이상 자격 증명 없음 | 같은 티어의 대체 모델, 없으면 한 단계 상위(같은 데이터 정책 안). 결정 로그에 `fallback_reason` |
 
-- 필수 제약을 만족하는 티어가 없으면 `route()`가 사유를 담아 예외를 던진다. 그러면 그 요청은 오류 응답으로 끝난다(fail-closed). 예: 사내 전용 데이터가 있는데 local 모델이 없는 경우.
+- 필수 제약을 만족하는 티어가 없으면 `route()`가 사유를 담아 예외를 던진다. 그러면 그 요청은 오류 응답으로 끝난다(fail-closed). 예: 로컬 전용 데이터가 있는데 local 모델이 없는 경우.
 - 2단이 실패하면 1단 결과만으로 결정한다. 이때 난이도를 모르므로 기본 티어(heavy)가 된다.
 - 쿼리별 분배의 실제 동작은 `node scripts/e2e-routing.ts [--no-local]`로 확인한다(08 §8).
 
@@ -287,7 +293,7 @@ test/                       stage1, stage2, analyze, decide 단위 테스트 (no
 - 결정 로그(schema: decision-log)에는 **쿼리 원문, 파일 내용, 매치된 민감 문자열을 저장하지 않는다.**
   - `prompt_hash`: 로컬 비밀 솔트로 만든 HMAC-SHA256(첫 16바이트).
   - 민감도 근거는 **규칙 이름만** 저장한다(예: `pii.phone_kr`). 매치된 값은 저장하지 않는다.
-  - `difficulty_rationale`은 로컬 모델이 생성한 문장이라 원문 일부가 들어갈 수 있다. 민감 세션이면 저장하지 않는다.
+  - `difficulty_rationale`은 판단 모델이 생성한 문장이라 원문 일부가 들어갈 수 있다. 민감 세션이면 저장하지 않는다.
 - 결과 로그(schema: outcome-log)의 암묵 라벨: `escalated`, `user_pinned_up`, `user_pinned_down`, `verify_exit_code`, `tool_error_loop`, `aborted`, `feedback`(06 §5.7).
 - 라우팅 결정 자체가 주제를 드러낼 수 있으므로(2610.09981), 로그를 사용자 단위로 집계해 공유하지 않는다.
 
@@ -359,8 +365,8 @@ pi --mode json --no-session -ne -ns -np -nc --no-mcp \
 ```
 
 - cwd는 케이스 임시 디렉터리다. 도구는 기본값(read, bash, edit, write)을 쓴다.
-- 측정 단위는 **(모델, 추론 강도) 쌍**이다. 전체 격자는 너무 크다(외부 4모델 × 최대 6단계 + 사내 2모델). 그래서 두 단계로 나눔다.
-  1. **이웃 측정**: 케이스마다 예상 쌍(`expected_tier_hypothesis`:`expected_thinking_hypothesis`)과 그 이웃을 돌린다. 이웃은 티어 ±1(같은 추론 강도)과 추론 강도 ±1(같은 티어)이다. 사내 티어는 두 모델 모두 `off`.
+- 측정 단위는 **(모델, 추론 강도) 쌍**이다. 전체 격자는 너무 크다(외부 4모델 × 최대 6단계 + 로컬 모델). 그래서 두 단계로 나눈다.
+  1. **이웃 측정**: 케이스마다 예상 쌍(`expected_tier_hypothesis`:`expected_thinking_hypothesis`)과 그 이웃을 돌린다. 이웃은 티어 ±1(같은 추론 강도)과 추론 강도 ±1(같은 티어)이다. local 티어 모델은 `off`.
   2. **확장 측정**: 이웃들의 성공 여부가 갈린 케이스만 더 넓게 돌린다. 예: `max`, 측정 전용 fable-5-2.
 - 반복: 케이스 × 쌍 × 3회. 결과가 갈린 (케이스, 쌍)만 5회로 늘린다(DARS 적응형).
 - `rewrites`는 반복 중 1회차는 `prompt`, 2·3회차는 `rewrites[0]`, `rewrites[1]`을 쓴다(입력 쪽 변동 측정).
@@ -416,9 +422,9 @@ pi --mode json --no-session -ne -ns -np -nc --no-mcp \
 | S5 | 루브릭 판정 모델의 신뢰도 (사람 판정과 일치율). 판정 모델(sonnet-5-5)이 standard 티어와 같아 자기 평가 편향을 점검해야 한다 | 첫 측정 후 표본 20건 수동 대조 |
 | S6 | 태스크 안에서 추론 강도를 바꿀지(같은 모델 유지). 네 외부 모델 모두 `supportsMidConvoEffort`를 지원한다. 캐시 영향은 실측으로 확인한다 | 시드 벤치마크 후 |
 | S7 | local 모델 서버가 막히거나 느릴 때의 동작 → 판단 모델은 Claude로 넘어가고, local 티어는 대체 모델 → 다음 티어 순으로 처리 | 구현됨 |
-| S8 | local 판단 모델의 지연이 쿼리마다 붙는다(측정한 사내 모델 p50 6~7초, 시간 초과 시 Claude로 넘어감). 기본은 local(사용자 결정), 지연이 중요하면 `prefer: "claude"` | 운영 중 판단 |
+| S8 | local 판단 모델의 지연이 쿼리마다 붙는다(측정한 로컬 모델 p50 6~7초, 시간 초과 시 Claude로 넘어감). 기본은 local(사용자 결정), 지연이 중요하면 `prefer: "claude"` | 운영 중 판단 |
 | S9 | ~~비밀정보 원문을 외부 벤더로 보내도 되는가~~ → 보내지 않는다. 모든 호출에서 가림(§6.5) | 해결 |
 | S12 | 시스템 프롬프트(AGENTS.md 등)의 비밀 값은 가리지 않는다. `context_with_system`으로 확장할지 | 런타임 구현 시 |
-| S13 | 가림 규칙이 못 잡는 비밀 형식(사내 고유 토큰 등)은 그대로 나간다. 사용자 정의 패턴(config) 추가 | 운영 전 |
-| S10 | 사내 모델 호출 시 403·503은 재시도하지 않기. pi의 에이전트 수준 재시도(기본 3회)가 실패를 30초로 늘렸다. 플러그인은 `ctx.modelRegistry`로 직접 호출하므로 재시도 동작을 따로 확인한다 | 런타임 구현 시 |
+| S13 | 가림 규칙이 못 잡는 비밀 형식(자체 형식 토큰 등)은 그대로 나간다. 사용자 정의 패턴(config) 추가 | 운영 전 |
+| S10 | 로컬 모델 호출 시 403·503은 재시도하지 않기. pi의 에이전트 수준 재시도(기본 3회)가 실패를 30초로 늘렸다. 플러그인은 `ctx.modelRegistry`로 직접 호출하므로 재시도 동작을 따로 확인한다 | 런타임 구현 시 |
 | S11 | 난이도 구간 경계(1↔2) 혼동이 여전히 결정 차이의 주원인(구간 불일치 20%) | 결과 기준 평가 후 |

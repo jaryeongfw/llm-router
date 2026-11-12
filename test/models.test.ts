@@ -51,7 +51,7 @@ test("local 자리표시를 사용자 모델로 바꾸고, 쓸 수 없는 모델
 
 const A = { prefer: "local" as const, model: null, claude_auto: true };
 
-test("판단 모델 기본: local 먼저, 다음 Claude. 사내 전용은 local만", () => {
+test("판단 모델 기본: local 먼저, 다음 Claude. 로컬 전용은 local만", () => {
   const cat = [M("acme/local-coder"), ...anthropic];
   const r = resolveAnalyzers(A, resolveRoster(rosterFile, ["acme/local-coder"], cat), cat);
   assert.deepEqual(r.external_ok.map((x) => x.ref), ["acme/local-coder", "anthropic/claude-haiku-5-5"]);
@@ -59,7 +59,7 @@ test("판단 모델 기본: local 먼저, 다음 Claude. 사내 전용은 local�
   assert.equal(r.external_ok[1].thinking, "off");
 });
 
-test("local이 없으면 Claude 자동 선택, 사내 전용 분석기는 없음", () => {
+test("local이 없으면 Claude 자동 선택, 로컬 전용 분석기는 없음", () => {
   const r = resolveAnalyzers(A, resolveRoster(rosterFile, [], anthropic), anthropic);
   assert.deepEqual(r.external_ok.map((x) => x.ref), ["anthropic/claude-haiku-5-5"]);
   assert.deepEqual(r.internal_only, []);

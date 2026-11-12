@@ -36,7 +36,7 @@ export interface HardConstraints {
   required_capabilities: Capability[];
   latency: "interactive" | "background";
   budget_cap_usd: number | null;
-  /** 비밀정보 형식 문자열 포함. 사내 게이트웨이가 거부하므로 secret_policy를 따른다 (07-spec §6.5). */
+  /** 비밀정보 형식 문자열 포함. 모델에는 가려서 보낸다 (secret_policy) (07-spec §6.5). */
   secret_present: boolean;
 }
 
@@ -130,7 +130,7 @@ export function runStage1(rules: Compiled[], input: Stage1Input): Stage1Result {
   const rule_hits: string[] = [];
   const groups = new Set<RuleGroup>();
   // secret 규칙을 먼저 원문에 적용하고, 나머지 규칙은 비밀 값을 가린 텍스트에 적용한다.
-  // 예: 접속 문자열 user:pw@host가 이메일(pii)로 다시 잡혀 "비밀정보 + 사내 전용"으로 잘못 차단되는 것을 막는다.
+  // 예: 접속 문자열 user:pw@host가 이메일(pii)로 다시 잡혀 "비밀정보 + 로컬 전용"으로 잘못 차단되는 것을 막는다.
   const masked = { ...input, text: maskSecrets(rules, input.text).text };
   const ordered = [...rules.filter((r) => r.group === "secret"), ...rules.filter((r) => r.group !== "secret")];
   for (const rule of ordered) {

@@ -28,7 +28,7 @@ test("민감 판정은 규칙 id만 남기고 값은 남기지 않는다", () =>
 });
 
 test("사용자 설정 내부 도메인", () => {
-  const r = runStage1(rules, { text: "wiki.corp.test 페이지 요약", internalMarkers: { domains: ["corp.test"], path_prefixes: [], keywords: [] } });
+  const r = runStage1(rules, { text: "wiki.example.internal 페이지 요약", internalMarkers: { domains: ["example.internal"], path_prefixes: [], keywords: [] } });
   assert.deepEqual(r.rule_hits, ["internal_marker.domains"]);
 });
 
@@ -56,7 +56,7 @@ test("maskSecrets: 비밀 값을 규칙 id 자리표시로 바꾼다", () => {
   const m = maskSecrets(rules, text);
   assert.equal(m.masked, 1);
   assert.ok(m.text.includes("[[MASKED aws_access_key]]"));
-  assert.ok(m.text.includes("010-0000-"), "개인정보는 가리지 않는다(사내 분석기로 보낸다)");
+  assert.ok(m.text.includes("010-0000-"), "개인정보는 가리지 않는다(로컬 판단 모델로 보낸다)");
   assert.equal(runStage1(rules, { text: m.text }).hard_constraints.secret_present, false);
 });
 

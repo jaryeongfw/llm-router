@@ -5,7 +5,7 @@
     {
       "id": "local",
       "rank": 0,
-      "description": "사내·자체 호스팅 모델. 민감 데이터 허용. 실제 모델은 사용자 설정 local_models로 지정한다",
+      "description": "로컬 모델(선택). 로컬 전용 데이터를 처리할 수 있는 유일한 티어. 사용자 설정 local_models로 채우며, 없으면 비어 있다",
       "models": [
         {
           "ref": "local/default",

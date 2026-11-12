@@ -22,7 +22,7 @@ export function mergeStages(s1: Stage1Result, s2: Stage2Result): MergedAnalysis 
   if (s2.output?.sensitivity_suspected) {
     if (hc.secret_present) {
       // 비밀정보는 이미 1단이 찾아 가렸고 secret_policy로 처리한다. 분석기는 가린 자리를 보고 의심을 낼 수 있으므로,
-      // 이것을 internal_only로 올리면 "비밀정보 + 사내 전용"이 되어 잘못 차단된다 (08 §6).
+      // 이것을 internal_only로 올리면 "비밀정보 + 로컬 전용"이 되어 잘못 차단된다 (08 §6).
       suspicionIgnored = "secret_masked";
     } else {
       hc.data_sensitivity = "internal_only";

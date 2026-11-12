@@ -1,7 +1,7 @@
 /**
  * 설정 불러오기: 저장소 기본값(config/) 위에 사용자 설정을 덮어쓴다.
  * 사용자 설정 위치: 환경 변수 LLM_ROUTER_CONFIG, 없으면 ~/.pi/agent/llm-router.json (없어도 됨)
- * 사용자 설정에서 주로 바꾸는 것: local_models(사내·자체 호스팅 모델), analyzer, internal_markers, pin_scope
+ * 사용자 설정에서 주로 바꾸는 것: local_models(로컬 모델), analyzer, internal_markers, pin_scope
  */
 import { existsSync, readFileSync } from "node:fs";
 import { homedir } from "node:os";

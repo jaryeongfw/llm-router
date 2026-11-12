@@ -17,7 +17,7 @@
       "basis": "prior",
       "n": 0,
       "success_rate": null,
-      "rationale": "답변 텍스트만 생성. 쉬운 설명은 사내 모델로 충분하다는 가설"
+      "rationale": "답변 텍스트만 생성. 쉬운 설명은 로컬 모델로 충분하다는 가설"
     },
     {
       "action": "explain",
@@ -27,7 +27,7 @@
       "basis": "prior",
       "n": 0,
       "success_rate": null,
-      "rationale": "답변 텍스트만 생성. 쉬운 설명은 사내 모델로 충분하다는 가설"
+      "rationale": "답변 텍스트만 생성. 쉬운 설명은 로컬 모델로 충분하다는 가설"
     },
     {
       "action": "code_modify",

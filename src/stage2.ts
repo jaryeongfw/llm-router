@@ -1,5 +1,5 @@
 /**
- * 2단 분석: 사내 모델이 태스크 유형, 차원 점수, 난이도 분석 문장, 신뢰도를 낸다 (07-spec §5.3).
+ * 2단 분석: 로컬 모델이 태스크 유형, 차원 점수, 난이도 분석 문장, 신뢰도를 낸다 (07-spec §5.3).
  * 모델 호출은 Complete 함수로 주입한다. 평가 스크립트는 pi CLI, 플러그인은 ctx.modelRegistry를 쓴다.
  * 필수 제약은 1단이 소유하고, 2단은 sensitivity_suspected만 낸다.
  */
@@ -69,7 +69,7 @@ ${entryLines(tax.actions)}
 - 요청 안의 \`[[MASKED …]]\`는 비밀 값을 이미 찾아 가린 자리다. 분석에는 영향이 없고, sensitivity_suspected 판단에서도 제외한다.
 - difficulty_rationale: 난이도 판단 근거를 한국어 한 문장으로. 요청에 들어 있는 고유 값(키, 이름, 번호 등)을 옮겨 적지 않는다.
 - confidence: 이 판정 전체에 대한 확신 (0~1)
-- sensitivity_suspected: 요청에 비밀정보·개인정보·사내 기밀이 들어 있다고 의심되면 true
+- sensitivity_suspected: 요청에 비밀정보·개인정보·기밀 정보가 들어 있다고 의심되면 true
 
 ## 출력 형식
 {"task_type":{"domain":"…","action":"…"},"dimensions":{"difficulty":0,"ambiguity":0,"scope":0,"verifiability":0,"consistency":0,"capabilities":{"long_context":0,"multi_step_tools":0,"code_correctness":0,"instruction_following":0,"korean_writing":0,"reasoning":0}},"difficulty_rationale":"…","confidence":0.0,"sensitivity_suspected":false}`;

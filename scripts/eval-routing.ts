@@ -1,12 +1,12 @@
 /**
- * 라우팅 판단 평가 (외부 벤더 호출 없음, 사내 분석기만 사용).
+ * 라우팅 판단 평가 (외부 벤더 호출 없음, 로컬 판단 모델만 사용).
  *  - 시드 케이스: 1단 → 2단 → decide 결과를 "사람 라벨로 계산한 결정"과 비교
  *  - 정답 세트: 행위·난이도·모호성·민감도 판정 정확도
  *  - 같은 뜻의 변형(prompt / rewrite0 / rewrite1) 간 결정 안정성
  * 측정 대상은 분석기 충실도다. 라벨 결정이 최적이라는 뜻은 아니다(조회표는 prior).
  *
  * 사용: node scripts/eval-routing.ts [--analyzer policy|<model-ref>] [--concurrency 3] [--timeout-ms 60000] [--reps 1] [--only cases|gold]
- *   --analyzer policy: 플러그인과 같은 규칙으로 판단 모델을 고른다 (기본: local → Claude 자동, 사내 전용은 local만)
+ *   --analyzer policy: 플러그인과 같은 규칙으로 판단 모델을 고른다 (기본: local → Claude 자동, 로컬 전용은 local만)
  *   --analyzer <ref>:  모든 요청을 그 모델 하나로 분석한다 (비교용. internal_only 요청도 보낸다)
  *   --rescore <raw.jsonl>: 모델을 다시 호출하지 않고 저장된 2단 결과를 현재 규칙·조회표로 다시 채점한다
  * 출력: bench/results/routing-eval-<날짜>.md (요약), bench/results/raw/*.jsonl (원시, git 제외)
@@ -42,14 +42,14 @@ const resolvedAnalyzers = resolveAnalyzers(cfg.analyzer, resolveRoster(loaded.ro
 const tax = rd("config/taxonomy.json") as Taxonomy;
 const rules = compileRules(rd("config/sensitivity-rules.json") as RulesFile);
 const ANALYZER = arg("analyzer", "policy");
-const MODEL = ANALYZER === "policy" ? `policy(외부 허용: ${resolvedAnalyzers.external_ok.map((r) => r.ref).join(" → ") || "없음"} | 사내 전용: ${resolvedAnalyzers.internal_only.map((r) => r.ref).join(" → ") || "없음"})` : ANALYZER;
+const MODEL = ANALYZER === "policy" ? `policy(외부 허용: ${resolvedAnalyzers.external_ok.map((r) => r.ref).join(" → ") || "없음"} | 로컬 전용: ${resolvedAnalyzers.internal_only.map((r) => r.ref).join(" → ") || "없음"})` : ANALYZER;
 const CONCURRENCY = Number(arg("concurrency", "3"));
 const TIMEOUT_MS = Number(arg("timeout-ms", "60000"));
 const REPS = Number(arg("reps", "1"));
 const ONLY = arg("only", "all");
 const RESCORE = arg("rescore", "");
 
-// ---- pi CLI로 사내 모델 호출 (도구·확장·세션 없음)
+// ---- pi CLI로 로컬 모델 호출 (도구·확장·세션 없음)
 const promptDir = mkdtempSync(join(tmpdir(), "llm-router-eval-"));
 const completeVia = (ref: string, thinking?: string): Complete => (system, user, signal) => new Promise((resolve, reject) => {
   const sysFile = join(promptDir, "system.txt");

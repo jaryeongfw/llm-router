@@ -199,7 +199,7 @@ export function registerRouter(pi: RouterHost, loaded: Loaded, opts: { onDecisio
         return { model: physical(reg, m.ref), thinkingLevel: m.default_thinking };
       }
       // 사용자 쿼리: session 고정이면 첫 결정 유지, 아니면 다시 결정.
-      // 고정 중이라도 1단 규칙은 쿼리마다 본다. 사내 전용 데이터인데 고정 모델이 외부 모델이면 다시 결정한다.
+      // 고정 중이라도 1단 규칙은 쿼리마다 본다. 로컬 전용 데이터인데 고정 모델이 외부 모델이면 다시 결정한다.
       if (req.state && (cfg.pin_scope === "session" || req.state.pinned_by !== "router")) {
         const s1 = runStage1Safe(rules, { text: lastUserText(req.messages), internalMarkers: cfg.internal_markers });
         const pinnedInternal = cfg.local_models.some((m) => (typeof m === "string" ? m : m.ref) === req.state!.model);

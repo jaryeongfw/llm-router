@@ -97,7 +97,7 @@ schemaCheck("user-config.schema.json", "config/llm-router.user.example.json", us
 const sp = pluginConfig.secret_policy;
 if (sp.tier !== undefined && !tierIds.includes(sp.tier)) errors.push(`plugin-config.secret_policy.tier: 없는 티어 ${sp.tier}`);
 if (sp.mode === "heavy" && roster.tiers.find((t: { id: string }) => t.id === sp.tier)?.models.some((m: { data_policy: string }) => m.data_policy === "internal")) {
-  warnings.push("secret_policy 티어에 사내 모델이 있음: 사내 게이트웨이는 가리지 않은 비밀정보 요청을 거부한다 (08 §3.2)");
+  warnings.push("secret_policy 티어에 로컬 모델이 있음: 로컬 모델 서버는 가리지 않은 비밀정보 요청을 거부할 수 있다 (08 §3.2)");
 }
 if (!roster.tiers.some((t: { models: { data_policy: string }[] }) => t.models.every((m) => m.data_policy === "internal"))) {
   errors.push("roster: internal 전용 티어가 없음 (민감 태스크를 처리할 수 없음)");

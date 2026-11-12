@@ -53,7 +53,7 @@
             "local",
             "claude"
           ],
-          "description": "외부 전송 가능한 요청에서 먼저 시도할 판단 모델. 사내 전용 요청은 항상 local만"
+          "description": "외부 전송 가능한 요청에서 먼저 시도할 판단 모델. 로컬 전용 요청은 항상 local만"
         },
         "model": {
           "anyOf": [
@@ -308,7 +308,7 @@
           }
         ]
       },
-      "description": "local 티어에 넣을 사내·자체 호스팅 모델 (앞에서부터 primary, fallback)"
+      "description": "local 티어에 넣을 로컬 모델 (앞에서부터 primary, fallback)"
     },
     "$comment": {
       "type": "string"

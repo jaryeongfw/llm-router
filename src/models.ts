@@ -37,7 +37,7 @@ export interface AnalyzerConfig {
 export interface ResolvedAnalyzers {
   /** 외부 전송 가능한 요청의 분석기 후보 (순서대로 시도) */
   external_ok: { ref: string; thinking?: Thinking }[];
-  /** 사내 전용 요청의 분석기 후보. local 모델만 */
+  /** 로컬 전용 요청의 분석기 후보. local 모델만 */
   internal_only: { ref: string }[];
   /** 자동 선택된 Claude 모델 (없으면 null) */
   claude: string | null;

@@ -65,7 +65,7 @@ test("session 고정이면 첫 결정 유지", async () => {
   assert.equal(r2.model, r1.model);
 });
 
-test("session 고정이어도 사내 전용 데이터가 오면 외부 고정 모델을 쓰지 않는다", async () => {
+test("session 고정이어도 로컬 전용 데이터가 오면 외부 고정 모델을 쓰지 않는다", async () => {
   const { user } = setup({ scope: "session", analyzer: byPrompt });
   const r1 = await user("마이크로서비스 설계 판단");
   assert.equal(r1.state.tier, "heavy");
@@ -74,14 +74,14 @@ test("session 고정이어도 사내 전용 데이터가 오면 외부 고정 �
   assert.equal(r2.model.provider, "acme");
 });
 
-test("판단 모델 기본은 local, 사내 전용 요청은 local로만 판단", async () => {
+test("판단 모델 기본은 local, 로컬 전용 요청은 local로만 판단", async () => {
   const { user, calls } = setup();
   await user("TCP와 UDP 차이");
   await user(fillTemplate("고객 {{FAKE_PHONE}} 안내", 4));
   assert.deepEqual(calls, ["acme/local-coder", "acme/local-coder"]);
 });
 
-test("local이 없으면 Claude 판단 모델 자동 선택, 사내 전용 쿼리는 차단", async () => {
+test("local이 없으면 Claude 판단 모델 자동 선택, 로컬 전용 쿼리는 차단", async () => {
   const { user, calls } = setup({ local: [] });
   const r = await user("TCP와 UDP 차이");
   assert.deepEqual(calls, ["anthropic/claude-haiku-5-5"]);

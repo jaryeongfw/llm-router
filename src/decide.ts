@@ -127,7 +127,7 @@ export function decide(
   if (a.hard_constraints.data_sensitivity === "internal_only") {
     candidates = candidates.filter((t) => t.models.every((m) => m.data_policy === "internal"));
     adjustments.push("sensitivity_filter");
-    reasons.push("민감 데이터 → 사내 티어만");
+    reasons.push("민감 데이터 → local 티어만");
   }
   // 비밀정보 (07-spec §6.5)
   //   mask : 런타임이 모든 모델 호출에서 가리므로(src/secret-guard.ts) 티어에 영향 없음
@@ -196,13 +196,13 @@ export function decide(
     if (chosen) reasons.push(`필요 티어 미충족 → ${chosen.id}로 제한`);
   }
   if (!chosen) {
-    // 후보가 하나도 없음: 제약 위반으로 대체하지 않는다. 사내 티어가 없으면 호출자가 사용자에게 알린다.
+    // 후보가 하나도 없음: 제약 위반으로 대체하지 않는다. local 티어가 없으면 호출자가 사용자에게 알린다.
     if (before === 0) throw new Error("사용 가능한 티어가 없습니다");
     if (secret && cfg.secret_policy.mode === "heavy" && a.hard_constraints.data_sensitivity === "internal_only") {
-      throw new Error("비밀정보와 사내 전용 데이터가 함께 있어 배정할 티어가 없습니다. 비밀정보를 지우고 다시 요청하세요");
+      throw new Error("비밀정보와 로컬 전용 데이터가 함께 있어 배정할 티어가 없습니다. 비밀정보를 지우고 다시 요청하세요");
     }
     if (a.hard_constraints.data_sensitivity === "internal_only") {
-      throw new Error("필수 제약을 만족하는 티어가 없습니다: 사내 전용 데이터(개인정보·사내 표식)가 있는데 쓸 수 있는 local 모델이 없습니다. 사용자 설정 local_models에 사내·자체 호스팅 모델을 지정하세요");
+      throw new Error("필수 제약을 만족하는 티어가 없습니다: 로컬 전용 데이터(개인정보·기밀 표식·#local)가 있는데 쓸 수 있는 local 모델이 없습니다. 로컬 모델을 쓰려면 사용자 설정 local_models에 지정하고, 외부 모델로 보내도 되는 내용이면 해당 표현을 빼고 다시 요청하세요");
     }
     throw new Error("필수 제약을 만족하는 티어가 없습니다 (필요 능력 또는 컨텍스트 크기를 만족하는 모델 없음)");
   }
