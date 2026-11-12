@@ -5,6 +5,7 @@
   "routing_table": "config/routing-table.v0.json",
   "mode": "A",
   "pin_scope": "query",
+  "tool_result_policy": "warn",
   "local_models": [],
   "default_tier": "heavy",
   "direct_tier": "light",
@@ -17,7 +18,9 @@
     "claude_auto": true,
     "timeout_ms": 12000,
     "max_tokens": 4096,
-    "mask_secrets": true
+    "mask_secrets": true,
+    "suspicion_without_local": "warn",
+    "followup_max_chars": 60
   },
   "secret_policy": {
     "mode": "mask",
