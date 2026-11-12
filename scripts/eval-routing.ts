@@ -6,7 +6,7 @@
  * 측정 대상은 분석기 충실도다. 라벨 결정이 최적이라는 뜻은 아니다(조회표는 prior).
  *
  * 사용: node scripts/eval-routing.ts [--analyzer policy|<model-ref>] [--concurrency 3] [--timeout-ms 60000] [--reps 1] [--only cases|gold]
- *   --analyzer policy: 설정대로 1단 민감도에 따라 external_ok / internal_only 분석기를 고른다 (기본)
+ *   --analyzer policy: 플러그인과 같은 규칙으로 판단 모델을 고른다 (기본: local → Claude 자동, 사내 전용은 local만)
  *   --analyzer <ref>:  모든 요청을 그 모델 하나로 분석한다 (비교용. internal_only 요청도 보낸다)
  *   --rescore <raw.jsonl>: 모델을 다시 호출하지 않고 저장된 2단 결과를 현재 규칙·조회표로 다시 채점한다
  * 출력: bench/results/routing-eval-<날짜>.md (요약), bench/results/raw/*.jsonl (원시, git 제외)
@@ -19,6 +19,9 @@ import { mergeStages } from "../src/analyze.ts";
 import { decide, THINKING_LADDER, type AnalysisInput, type DecideConfig, type Decision, type Roster, type RoutingTable } from "../src/decide.ts";
 import { compileRules, maskSecrets, runStage1Safe, type RulesFile } from "../src/stage1.ts";
 import { runStage2, type Complete, type Stage2Result, type Taxonomy } from "../src/stage2.ts";
+import { loadConfig } from "../src/config.ts";
+import { resolveAnalyzers, resolveRoster } from "../src/models.ts";
+import { cliCatalog } from "./lib/catalog.ts";
 import { fillTemplate } from "./lib/fake.ts";
 import { hypothesisFor } from "./lib/hypothesis.ts";
 
@@ -31,12 +34,15 @@ const arg = (name: string, def: string) => {
 
 const roster = rd("config/roster.json") as Roster & { analyzers: { ref: string }[] };
 const table = rd("config/routing-table.v0.json") as RoutingTable;
-type Route = { model: string; fallbacks: string[]; thinking?: string };
-const cfg = rd("config/llm-router.default.json") as DecideConfig & { analyzer: { external_ok: Route; internal_only: Route; timeout_ms: number; mask_secrets: boolean } };
+const loaded = loadConfig();
+const cfg = loaded.cfg;
+type Route = { ref: string; thinking?: string }[];
+const catalog = cliCatalog();
+const resolvedAnalyzers = resolveAnalyzers(cfg.analyzer, resolveRoster(loaded.roster, cfg.local_models, catalog), catalog);
 const tax = rd("config/taxonomy.json") as Taxonomy;
 const rules = compileRules(rd("config/sensitivity-rules.json") as RulesFile);
 const ANALYZER = arg("analyzer", "policy");
-const MODEL = ANALYZER === "policy" ? `policy(${cfg.analyzer.external_ok.model} | ${cfg.analyzer.internal_only.model})` : ANALYZER;
+const MODEL = ANALYZER === "policy" ? `policy(외부 허용: ${resolvedAnalyzers.external_ok.map((r) => r.ref).join(" → ") || "없음"} | 사내 전용: ${resolvedAnalyzers.internal_only.map((r) => r.ref).join(" → ") || "없음"})` : ANALYZER;
 const CONCURRENCY = Number(arg("concurrency", "3"));
 const TIMEOUT_MS = Number(arg("timeout-ms", "60000"));
 const REPS = Number(arg("reps", "1"));
@@ -55,12 +61,12 @@ const completeVia = (ref: string, thinking?: string): Complete => (system, user,
   signal?.addEventListener("abort", () => child.kill("SIGKILL"));
   child.on("close", (code) => (code === 0 && out.trim() ? resolve(out) : reject(new Error(`pi 종료 ${code}: ${err.slice(0, 200)}`))));
 });
-const routeModels = (r: Route) => [r.model, ...r.fallbacks].map((ref, i) => ({ ref, complete: completeVia(ref, i === 0 ? r.thinking : undefined) }));
+const routeModels = (r: Route) => r.map((x) => ({ ref: x.ref, complete: completeVia(x.ref, x.thinking) }));
 const fixedModels = ANALYZER === "policy" ? null : [{ ref: ANALYZER, complete: completeVia(ANALYZER, ANALYZER.startsWith("anthropic/") ? "off" : undefined) }];
 /** 1단 판정으로 분석기를 고르고, 비밀정보는 가린 텍스트를 보낸다 (07-spec §5.1). */
 async function stage2For(text: string, attachments: "image"[]): Promise<Stage2Result & { masked: boolean }> {
   const s1 = runStage1Safe(rules, { text, attachments });
-  const route = s1.hard_constraints.data_sensitivity === "internal_only" ? cfg.analyzer.internal_only : cfg.analyzer.external_ok;
+  const route = s1.hard_constraints.data_sensitivity === "internal_only" ? resolvedAnalyzers.internal_only : resolvedAnalyzers.external_ok;
   const m = cfg.analyzer.mask_secrets ? maskSecrets(rules, text) : { text, masked: 0 };
   const r = await runStage2(m.text, tax, fixedModels ?? routeModels(route), TIMEOUT_MS);
   return { ...r, masked: m.masked > 0 };
@@ -160,7 +166,7 @@ P();
 // 2단 상태
 const statusCount = new Map<string, number>();
 for (const r of rows) statusCount.set(r.s2.status, (statusCount.get(r.s2.status) ?? 0) + 1);
-const primaries = new Set(fixedModels ? [ANALYZER] : [cfg.analyzer.external_ok.model, cfg.analyzer.internal_only.model]);
+const primaries = new Set(fixedModels ? [ANALYZER] : [resolvedAnalyzers.external_ok[0]?.ref, resolvedAnalyzers.internal_only[0]?.ref].filter(Boolean));
 const usedFallback = rows.filter((r) => r.s2.model && !primaries.has(r.s2.model)).length;
 const byModel = new Map<string, number>();
 for (const r of rows) if (r.s2.model) byModel.set(r.s2.model, (byModel.get(r.s2.model) ?? 0) + 1);

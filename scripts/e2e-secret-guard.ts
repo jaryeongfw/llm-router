@@ -8,11 +8,15 @@
  *   대조:   가림 없이 S1                          → 유출이 검출되어야 함 (검사 장치 확인)
  * 출력에는 비밀 값을 넣지 않는다.
  * 사용: node scripts/e2e-secret-guard.ts [--models a,b] [--no-control]
+ *   --models 생략 시: 사용자 설정의 첫 local 모델과 자동 선택된 Claude 판단 모델 (있는 것만)
  */
 import { spawn } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { loadConfig } from "../src/config.ts";
+import { pickClaudeAnalyzer, resolveRoster } from "../src/models.ts";
+import { cliCatalog } from "./lib/catalog.ts";
 import { fillTemplate } from "./lib/fake.ts";
 
 const ROOT = join(import.meta.dirname, "..");
@@ -20,7 +24,13 @@ const arg = (n: string, d: string) => {
   const i = process.argv.indexOf(`--${n}`);
   return i > 0 ? process.argv[i + 1] : d;
 };
-const MODELS = arg("models", "anthropic/claude-haiku-5-5,simflow/ixi-simflow-codeadvisor").split(",");
+function defaultModels(): string {
+  const loaded = loadConfig();
+  const catalog = cliCatalog();
+  const local = resolveRoster(loaded.roster, loaded.cfg.local_models, catalog).tiers.find((t) => t.id === "local")?.models[0]?.ref;
+  return [pickClaudeAnalyzer(catalog), local].filter(Boolean).join(",");
+}
+const MODELS = arg("models", "").split(",").filter(Boolean).length ? arg("models", "").split(",") : defaultModels().split(",");
 const CONTROL = !process.argv.includes("--no-control");
 
 const AWS = fillTemplate("{{FAKE_AWS_KEY}}", 101);
