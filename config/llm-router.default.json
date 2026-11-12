@@ -28,8 +28,8 @@
     "mask_secrets": true
   },
   "secret_policy": {
-    "tier": "heavy",
-    "on_failure": "block"
+    "mode": "mask",
+    "tier": "heavy"
   },
   "verifiable_down": {
     "max_difficulty": 0,

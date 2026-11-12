@@ -83,16 +83,28 @@ test("사내 기본 모델을 쓸 수 없으면 티어 내 대체 모델", () =>
   assert.ok(d.fallback_reason);
 });
 
-test("비밀정보는 난이도와 무관하게 heavy(opus)", () => {
+const withPolicy = (mode: "mask" | "heavy" | "block") => ({ ...cfg, secret_policy: { mode, tier: "heavy" } });
+
+test("비밀정보 mask(기본): 티어는 평소대로 (런타임이 가림)", () => {
+  assert.equal(cfg.secret_policy.mode, "mask");
+  const plain = run({ difficulty: 0, verifiability: 0 });
+  const secret = run({ secret: true, difficulty: 0, verifiability: 0 });
+  assert.equal(secret.tier, plain.tier);
+  assert.ok(!secret.adjustments.includes("secret_policy"));
+  assert.equal(run({ secret: true, sensitive: true }).tier, "local", "개인정보와 함께 있어도 사내 티어로 (가린 뒤 처리)");
+});
+
+test("비밀정보 heavy: 난이도와 무관하게 heavy, 사내 전용과 겹치면 결정 실패", () => {
   for (const difficulty of [0, 2]) {
-    const d = run({ secret: true, difficulty, verifiability: 0 });
+    const d = decide(analysis({ secret: true, difficulty, verifiability: 0 }), roster, table, withPolicy("heavy"));
     assert.deepEqual([d.tier, d.model], ["heavy", "anthropic/claude-opus-5-5"]);
     assert.ok(d.adjustments.includes("secret_policy"));
   }
+  assert.throws(() => decide(analysis({ secret: true, sensitive: true }), roster, table, withPolicy("heavy")), /비밀정보/);
 });
 
-test("비밀정보 + 사내 전용 데이터는 배정 불가 (차단)", () => {
-  assert.throws(() => run({ secret: true, sensitive: true }), /비밀정보/);
+test("비밀정보 block: 결정하지 않음", () => {
+  assert.throws(() => decide(analysis({ secret: true }), roster, table, withPolicy("block")), /secret_policy: block/);
 });
 
 test("비가역 부작용은 하한 티어(heavy)", () => {

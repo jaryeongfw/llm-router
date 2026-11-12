@@ -242,21 +242,24 @@
     "secret_policy": {
       "type": "object",
       "required": [
-        "tier",
-        "on_failure"
+        "mode"
       ],
       "additionalProperties": false,
       "properties": {
-        "tier": {
-          "$ref": "common.schema.json#/$defs/id"
-        },
-        "on_failure": {
+        "mode": {
           "enum": [
+            "mask",
+            "heavy",
             "block"
-          ]
+          ],
+          "description": "mask: 모든 모델 호출에서 가리고 티어는 평소대로 / heavy: tier로 강제 배정 / block: 차단"
+        },
+        "tier": {
+          "$ref": "common.schema.json#/$defs/id",
+          "description": "mode=heavy일 때 배정 티어"
         }
       },
-      "description": "비밀정보 포함 태스크의 배정 티어"
+      "description": "비밀정보 포함 태스크 처리 (07-spec §6.5)"
     },
     "verifiable_down": {
       "type": "object",

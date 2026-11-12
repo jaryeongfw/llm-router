@@ -36,7 +36,7 @@ export interface DecideConfig {
   low_confidence: number;
   operating_points: Record<OperatingPoint, { thinking_shift: number; allow_verifiable_down: boolean; tier_shift?: number }>;
   thinking_rules: { reasoning_up_at: number; max_thinking: Thinking };
-  secret_policy: { tier: string; on_failure: "block" };
+  secret_policy: { mode: "mask" | "heavy" | "block"; tier?: string };
   verifiable_down: { max_difficulty: number; confident_max_difficulty: number; min_confidence: number };
 }
 
@@ -129,12 +129,16 @@ export function decide(
     adjustments.push("sensitivity_filter");
     reasons.push("민감 데이터 → 사내 티어만");
   }
-  // 비밀정보: 사내 게이트웨이가 거부하므로 secret_policy 티어(기본 heavy)만. 실패하면 호출자가 차단한다.
+  // 비밀정보 (07-spec §6.5)
+  //   mask : 런타임이 모든 모델 호출에서 가리므로(src/secret-guard.ts) 티어에 영향 없음
+  //   heavy: secret_policy.tier만 후보 / block: 결정하지 않음
   const secret = a.hard_constraints.secret_present === true;
-  if (secret) {
-    candidates = candidates.filter((t) => t.id === cfg.secret_policy.tier);
+  if (secret && cfg.secret_policy.mode === "block") throw new Error("비밀정보가 포함되어 작업을 시작하지 않습니다 (secret_policy: block). 비밀정보를 지우고 다시 요청하세요");
+  if (secret && cfg.secret_policy.mode === "heavy") {
+    const tier = cfg.secret_policy.tier ?? tiers.at(-1)!.id;
+    candidates = candidates.filter((t) => t.id === tier);
     adjustments.push("secret_policy");
-    reasons.push(`비밀정보 포함 → ${cfg.secret_policy.tier}만 시도`);
+    reasons.push(`비밀정보 포함 → ${tier}만 시도`);
   }
   const caps = a.hard_constraints.required_capabilities;
   if (caps.length) {
@@ -194,7 +198,7 @@ export function decide(
   if (!chosen) {
     // 후보가 하나도 없음: 제약 위반으로 대체하지 않는다. 사내 티어가 없으면 호출자가 사용자에게 알린다.
     if (before === 0) throw new Error("사용 가능한 티어가 없습니다");
-    if (secret && a.hard_constraints.data_sensitivity === "internal_only") {
+    if (secret && cfg.secret_policy.mode === "heavy" && a.hard_constraints.data_sensitivity === "internal_only") {
       throw new Error("비밀정보와 사내 전용 데이터가 함께 있어 배정할 티어가 없습니다. 비밀정보를 지우고 다시 요청하세요");
     }
     throw new Error("필수 제약을 만족하는 티어가 없습니다");

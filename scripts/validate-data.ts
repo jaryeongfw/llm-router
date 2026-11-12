@@ -97,9 +97,10 @@ for (const route of ["external_ok", "internal_only"]) {
     else if (route === "internal_only" && m.data_policy !== "internal") errors.push(`plugin-config.analyzer.internal_only: 외부 모델 ${ref}`);
   }
 }
-if (!tierIds.includes(pluginConfig.secret_policy.tier)) errors.push(`plugin-config.secret_policy.tier: 없는 티어 ${pluginConfig.secret_policy.tier}`);
-if (roster.tiers.find((t: { id: string }) => t.id === pluginConfig.secret_policy.tier)?.models.some((m: { data_policy: string }) => m.data_policy === "internal")) {
-  warnings.push("secret_policy 티어에 사내 모델이 있음: 사내 게이트웨이는 비밀정보 요청을 거부한다 (08 §3.2)");
+const sp = pluginConfig.secret_policy;
+if (sp.tier !== undefined && !tierIds.includes(sp.tier)) errors.push(`plugin-config.secret_policy.tier: 없는 티어 ${sp.tier}`);
+if (sp.mode === "heavy" && roster.tiers.find((t: { id: string }) => t.id === sp.tier)?.models.some((m: { data_policy: string }) => m.data_policy === "internal")) {
+  warnings.push("secret_policy 티어에 사내 모델이 있음: 사내 게이트웨이는 가리지 않은 비밀정보 요청을 거부한다 (08 §3.2)");
 }
 if (!roster.tiers.some((t: { models: { data_policy: string }[] }) => t.models.every((m) => m.data_policy === "internal"))) {
   errors.push("roster: internal 전용 티어가 없음 (민감 태스크를 처리할 수 없음)");
