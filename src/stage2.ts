@@ -66,6 +66,7 @@ ${entryLines(tax.actions)}
 | 서비스 간 이벤트 전달을 동기 호출에서 메시지 큐로 바꿀지 판단해 줘 | design | 3 | 2 | 3 | 3 |
 
 ## 기타
+- 요청이 \`[이전 대화]\`와 \`[이번 요청]\`으로 나뉘어 있으면 **이번 요청**을 판정한다. 이전 대화는 "그걸로 해 줘" 같은 지시 대상을 파악하는 참고용이다.
 - 요청 안의 \`[[MASKED …]]\`는 비밀 값을 이미 찾아 가린 자리다. 분석에는 영향이 없고, sensitivity_suspected 판단에서도 제외한다.
 - difficulty_rationale: 난이도 판단 근거를 한국어 한 문장으로. 요청에 들어 있는 고유 값(키, 이름, 번호 등)을 옮겨 적지 않는다.
 - confidence: 이 판정 전체에 대한 확신 (0~1)
@@ -133,20 +134,30 @@ export function parseStage2(text: string, tax: Taxonomy): Stage2Output {
 /**
  * 기본 모델 → 대체 모델 순서로 시도한다. 각 시도에 시간 상한을 둔다.
  * 형식 오류도 다음 모델로 넘긴다 (같은 모델 재시도는 하지 않는다). 모두 실패하면 마지막 실패를 돌려준다.
+ * - totalMs: 판단 전체 시간 상한. 남은 시간이 시도별 상한보다 작으면 남은 만큼만 기다리고, 다 쓰면 더 시도하지 않는다.
+ * - signal: 사용자 중단. 중단되면 진행 중인 호출을 끊고 다음 모델은 시도하지 않는다.
  */
 export async function runStage2(
   request: string,
   tax: Taxonomy,
   models: { ref: string; complete: Complete }[],
   timeoutMs: number,
+  opts: { totalMs?: number; signal?: AbortSignal } = {},
 ): Promise<Stage2Result> {
   const system = buildSystemPrompt(tax);
   const user = buildUserPrompt(request);
   const started = Date.now();
+  const total = opts.totalMs && opts.totalMs > 0 ? opts.totalMs : Number.POSITIVE_INFINITY;
   let last: Stage2Result = { status: "unavailable", output: null, latency_ms: 0 };
   for (const m of models) {
+    if (opts.signal?.aborted) return { ...last, status: "unavailable", error: "사용자 중단", latency_ms: Date.now() - started };
+    const remaining = total - (Date.now() - started);
+    if (remaining <= 0) return { ...last, status: "timeout", error: last.error ?? "판단 전체 시간 상한 초과", latency_ms: Date.now() - started };
     const ac = new AbortController();
-    const timer = setTimeout(() => ac.abort(), timeoutMs);
+    let timedOut = false;
+    const timer = setTimeout(() => { timedOut = true; ac.abort(); }, Math.min(timeoutMs, remaining));
+    const onAbort = () => ac.abort();
+    opts.signal?.addEventListener("abort", onAbort, { once: true });
     try {
       const text = await m.complete(system, user, ac.signal);
       try {
@@ -155,9 +166,10 @@ export async function runStage2(
         last = { status: "parse_error", output: null, error: (e as Error).message, latency_ms: Date.now() - started, model: m.ref };
       }
     } catch (e) {
-      last = { status: ac.signal.aborted ? "timeout" : "unavailable", output: null, error: (e as Error).message, latency_ms: Date.now() - started, model: m.ref };
+      last = { status: timedOut ? "timeout" : "unavailable", output: null, error: (e as Error).message, latency_ms: Date.now() - started, model: m.ref };
     } finally {
       clearTimeout(timer);
+      opts.signal?.removeEventListener("abort", onAbort);
     }
   }
   return last;
