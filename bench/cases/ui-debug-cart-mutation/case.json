@@ -1,0 +1,51 @@
+{
+  "budget": {
+    "max_turns": 40,
+    "timeout_s": 900
+  },
+  "id": "ui-debug-cart-mutation",
+  "fixture": "ui-utils",
+  "task_type": {
+    "domain": "frontend",
+    "action": "debug"
+  },
+  "summary": "리듀서가 이전 상태를 변경 (불변성 위반)",
+  "prompt": "장바구니에서 같은 상품을 다시 담으면, 실행 취소용으로 저장해 둔 이전 상태 스냅샷의 수량까지 같이 바뀌어 있어요. 원인을 찾아 고쳐 주세요.",
+  "rewrites": [
+    "같은 상품을 장바구니에 또 추가하면 이전 state 객체도 수량이 변해서 undo가 안 됩니다. 원인 찾고 수정해 주세요.",
+    "cart 리듀서 문제 같은데, 재추가 시 예전 상태까지 수량 바뀜. undo 깨짐. 고쳐줘."
+  ],
+  "labels": {
+    "hard_constraints": {
+      "data_sensitivity": "external_ok",
+      "irreversible_side_effects": false,
+      "required_capabilities": [
+        "tool_use"
+      ],
+      "latency": "interactive",
+      "budget_cap_usd": null
+    },
+    "dimensions": {
+      "difficulty": 2,
+      "ambiguity": 0,
+      "scope": 0,
+      "verifiability": 0,
+      "consistency": 0,
+      "capabilities": {
+        "long_context": 0,
+        "multi_step_tools": 1,
+        "code_correctness": 2,
+        "instruction_following": 0,
+        "korean_writing": 0,
+        "reasoning": 2
+      }
+    }
+  },
+  "verification": {
+    "type": "command",
+    "command": "npm test",
+    "timeout_s": 120
+  },
+  "expected_tier_hypothesis": "standard",
+  "expected_thinking_hypothesis": "high"
+}

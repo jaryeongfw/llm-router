@@ -1,0 +1,51 @@
+{
+  "budget": {
+    "max_turns": 40,
+    "timeout_s": 900
+  },
+  "id": "sql-transform-cohort-retention",
+  "fixture": "sales-reports",
+  "task_type": {
+    "domain": "data",
+    "action": "data_transform"
+  },
+  "summary": "가입 월 코호트 리텐션 쿼리",
+  "prompt": "queries/cohort_retention.sql에 가입 월 코호트별 리텐션 쿼리를 작성해 주세요. 열: cohort(가입 월 YYYY-MM), cohort_size(코호트 고객 수), m1_retained(가입 다음 달에 결제 완료 주문이 1건 이상인 고객 수), m2_retained(그다음 달 기준 같은 값). 데이터가 없는 달이면 0, cohort 순 정렬.",
+  "rewrites": [
+    "가입 월별 코호트 리텐션 SQL을 queries/cohort_retention.sql로 작성해 주세요. cohort, cohort_size, m1_retained(가입 +1개월에 PAID 주문 있는 고객 수), m2_retained(+2개월). 해당 없으면 0, cohort 정렬.",
+    "코호트 리텐션 쿼리 필요. 파일 queries/cohort_retention.sql. 가입월 기준 +1달, +2달에 PAID 주문 있는 고객 수 세기. 컬럼 cohort/cohort_size/m1_retained/m2_retained."
+  ],
+  "labels": {
+    "hard_constraints": {
+      "data_sensitivity": "external_ok",
+      "irreversible_side_effects": false,
+      "required_capabilities": [
+        "tool_use"
+      ],
+      "latency": "interactive",
+      "budget_cap_usd": null
+    },
+    "dimensions": {
+      "difficulty": 3,
+      "ambiguity": 0,
+      "scope": 0,
+      "verifiability": 0,
+      "consistency": 0,
+      "capabilities": {
+        "long_context": 0,
+        "multi_step_tools": 1,
+        "code_correctness": 2,
+        "instruction_following": 2,
+        "korean_writing": 0,
+        "reasoning": 3
+      }
+    }
+  },
+  "verification": {
+    "type": "command",
+    "command": "npm test",
+    "timeout_s": 120
+  },
+  "expected_tier_hypothesis": "heavy",
+  "expected_thinking_hypothesis": "xhigh"
+}

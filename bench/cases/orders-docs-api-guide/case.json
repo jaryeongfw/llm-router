@@ -1,0 +1,75 @@
+{
+  "budget": {
+    "max_turns": 40,
+    "timeout_s": 900
+  },
+  "id": "orders-docs-api-guide",
+  "fixture": "orders-service",
+  "task_type": {
+    "domain": "docs",
+    "action": "docs_write"
+  },
+  "summary": "API 가이드 작성 (형식 검사 + 루브릭)",
+  "prompt": "orders-service의 API 사용 가이드를 docs/API.md에 한국어로 작성해 주세요. `## placeOrder`, `## cancelOrder`, `## getOrder`, `## 오류` 절을 두고, 오류 절에는 모든 오류 클래스와 발생 조건을 정리하고, TypeScript 사용 예시를 하나 이상 넣어 주세요.",
+  "rewrites": [
+    "docs/API.md에 서비스 사용 가이드를 써 주세요(한국어). 절 제목은 ## placeOrder / ## cancelOrder / ## getOrder / ## 오류, 오류 클래스 전부 정리, TS 예시 포함.",
+    "API 문서 필요해. docs/API.md, 한국어, placeOrder·cancelOrder·getOrder·오류 절, 에러 클래스 표, ts 코드 예시."
+  ],
+  "labels": {
+    "hard_constraints": {
+      "data_sensitivity": "external_ok",
+      "irreversible_side_effects": false,
+      "required_capabilities": [
+        "tool_use"
+      ],
+      "latency": "interactive",
+      "budget_cap_usd": null
+    },
+    "dimensions": {
+      "difficulty": 2,
+      "ambiguity": 0,
+      "scope": 1,
+      "verifiability": 1,
+      "consistency": 1,
+      "capabilities": {
+        "long_context": 1,
+        "multi_step_tools": 1,
+        "code_correctness": 0,
+        "instruction_following": 2,
+        "korean_writing": 2,
+        "reasoning": 1
+      }
+    }
+  },
+  "verification": {
+    "type": "hybrid",
+    "artifact": "docs/API.md",
+    "rubric": [
+      {
+        "id": "accurate",
+        "criterion": "설명한 동작(검증 조건, 롤백, 취소 가능 상태)이 코드와 일치한다",
+        "must": true
+      },
+      {
+        "id": "errors_complete",
+        "criterion": "ValidationError, OutOfStockError, InvalidStateError, NotFoundError의 발생 조건이 맞다",
+        "must": true
+      },
+      {
+        "id": "example_runs",
+        "criterion": "예시 코드가 실제 export 이름과 시그니처를 쓴다",
+        "must": false
+      },
+      {
+        "id": "korean_quality",
+        "criterion": "한국어가 자연스럽고 간결하다",
+        "must": false
+      }
+    ],
+    "pass_threshold": 0.75,
+    "command": "npm test",
+    "timeout_s": 120
+  },
+  "expected_tier_hypothesis": "standard",
+  "expected_thinking_hypothesis": "low"
+}

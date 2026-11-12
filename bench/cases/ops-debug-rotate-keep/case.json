@@ -1,0 +1,51 @@
+{
+  "budget": {
+    "max_turns": 40,
+    "timeout_s": 900
+  },
+  "id": "ops-debug-rotate-keep",
+  "fixture": "ops-scripts",
+  "task_type": {
+    "domain": "infra",
+    "action": "debug"
+  },
+  "summary": "로그 보관 개수 off-by-one",
+  "prompt": "rotate_logs.sh를 keep=7로 돌렸는데 로그가 6개만 남아요. 고쳐 주세요.",
+  "rewrites": [
+    "로그 정리 스크립트가 지정한 개수보다 하나 적게 남깁니다(7 → 6). 수정 부탁해요.",
+    "rotate_logs.sh 보관 개수 하나 모자람. 고쳐줘."
+  ],
+  "labels": {
+    "hard_constraints": {
+      "data_sensitivity": "external_ok",
+      "irreversible_side_effects": false,
+      "required_capabilities": [
+        "tool_use"
+      ],
+      "latency": "interactive",
+      "budget_cap_usd": null
+    },
+    "dimensions": {
+      "difficulty": 1,
+      "ambiguity": 0,
+      "scope": 0,
+      "verifiability": 0,
+      "consistency": 0,
+      "capabilities": {
+        "long_context": 0,
+        "multi_step_tools": 1,
+        "code_correctness": 1,
+        "instruction_following": 0,
+        "korean_writing": 0,
+        "reasoning": 1
+      }
+    }
+  },
+  "verification": {
+    "type": "command",
+    "command": "npm test",
+    "timeout_s": 120
+  },
+  "expected_tier_hypothesis": "local",
+  "expected_thinking_hypothesis": "off"
+}

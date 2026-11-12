@@ -1,0 +1,51 @@
+{
+  "budget": {
+    "max_turns": 40,
+    "timeout_s": 900
+  },
+  "id": "ui-debug-relative-boundary",
+  "fixture": "ui-utils",
+  "task_type": {
+    "domain": "frontend",
+    "action": "debug"
+  },
+  "summary": "상대 시간 경계값 오류 (60분 전)",
+  "prompt": "정확히 1시간 전에 쓴 글이 '1시간 전'이 아니라 '60분 전'으로 보여요. 고쳐 주세요.",
+  "rewrites": [
+    "relativeTime에서 딱 1시간 지난 경우 '60분 전'이라고 나옵니다. '1시간 전'이 맞아요. 수정 부탁해요.",
+    "상대시간 표시 버그: 3600초 전 = '60분 전'으로 뜸. 고쳐줘."
+  ],
+  "labels": {
+    "hard_constraints": {
+      "data_sensitivity": "external_ok",
+      "irreversible_side_effects": false,
+      "required_capabilities": [
+        "tool_use"
+      ],
+      "latency": "interactive",
+      "budget_cap_usd": null
+    },
+    "dimensions": {
+      "difficulty": 1,
+      "ambiguity": 0,
+      "scope": 0,
+      "verifiability": 0,
+      "consistency": 0,
+      "capabilities": {
+        "long_context": 0,
+        "multi_step_tools": 1,
+        "code_correctness": 1,
+        "instruction_following": 0,
+        "korean_writing": 0,
+        "reasoning": 1
+      }
+    }
+  },
+  "verification": {
+    "type": "command",
+    "command": "npm test",
+    "timeout_s": 120
+  },
+  "expected_tier_hypothesis": "local",
+  "expected_thinking_hypothesis": "off"
+}

@@ -1,0 +1,82 @@
+{
+  "budget": {
+    "max_turns": 40,
+    "timeout_s": 900
+  },
+  "id": "orders-design-idempotency-storage",
+  "fixture": "orders-service",
+  "task_type": {
+    "domain": "backend",
+    "action": "design"
+  },
+  "summary": "멱등 키 저장 방식 비교·권고",
+  "prompt": "orders-service를 여러 인스턴스로 운영하려고 합니다. 주문 멱등 키를 어디에 어떻게 저장할지 선택지를 비교하고 권고안을 주세요. 선택지는 직접 정해도 됩니다. 코드는 수정하지 마세요.",
+  "rewrites": [
+    "다중 인스턴스 환경에서 placeOrder 멱등 키 저장소를 설계하려 해요. 대안 비교(장단점)와 추천을 부탁합니다. 구현은 하지 마세요.",
+    "멱등 키 저장 설계 리뷰: 인스턴스 여러 대 기준으로 옵션 몇 개 비교하고 뭘 쓸지 추천해줘. 코드 변경 X."
+  ],
+  "labels": {
+    "hard_constraints": {
+      "data_sensitivity": "external_ok",
+      "irreversible_side_effects": false,
+      "required_capabilities": [
+        "tool_use"
+      ],
+      "latency": "interactive",
+      "budget_cap_usd": null
+    },
+    "dimensions": {
+      "difficulty": 3,
+      "ambiguity": 2,
+      "scope": 1,
+      "verifiability": 3,
+      "consistency": 1,
+      "capabilities": {
+        "long_context": 0,
+        "multi_step_tools": 1,
+        "code_correctness": 0,
+        "instruction_following": 1,
+        "korean_writing": 2,
+        "reasoning": 3
+      }
+    }
+  },
+  "verification": {
+    "type": "rubric",
+    "rubric": [
+      {
+        "id": "options",
+        "criterion": "서로 다른 선택지를 2개 이상(예: 프로세스 메모리, DB 유니크 제약, 공유 캐시+TTL) 비교한다",
+        "must": true
+      },
+      {
+        "id": "memory_rejected",
+        "criterion": "프로세스 메모리 저장은 다중 인스턴스에서 동작하지 않음을 지적한다",
+        "must": true
+      },
+      {
+        "id": "race",
+        "criterion": "같은 키가 동시에 들어오는 경쟁 조건과 그 처리 방법(원자적 선점, 유니크 제약 등)을 다룬다",
+        "must": true
+      },
+      {
+        "id": "failure_semantics",
+        "criterion": "처리 중 실패 시 키를 어떻게 다룰지(미소비, 상태 저장)를 다룬다",
+        "must": false
+      },
+      {
+        "id": "ttl_payload",
+        "criterion": "키 보존 기간과 요청 내용 지문(fingerprint) 비교를 다룬다",
+        "must": false
+      },
+      {
+        "id": "recommendation",
+        "criterion": "근거와 함께 하나의 권고안을 명확히 낸다",
+        "must": true
+      }
+    ],
+    "pass_threshold": 0.75
+  },
+  "expected_tier_hypothesis": "heavy",
+  "expected_thinking_hypothesis": "xhigh"
+}

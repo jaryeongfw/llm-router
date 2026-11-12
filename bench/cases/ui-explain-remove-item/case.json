@@ -1,0 +1,77 @@
+{
+  "budget": {
+    "max_turns": 40,
+    "timeout_s": 900
+  },
+  "id": "ui-explain-remove-item",
+  "fixture": "ui-utils",
+  "task_type": {
+    "domain": "frontend",
+    "action": "explain"
+  },
+  "summary": "REMOVE_ITEM 동작 설명",
+  "prompt": "cartReducer에서 REMOVE_ITEM 액션이 어떻게 동작하는지 알려 주세요.",
+  "rewrites": [
+    "장바구니 리듀서의 REMOVE_ITEM 처리 방식을 설명해 주세요.",
+    "REMOVE_ITEM 하면 state가 어떻게 바뀌어?"
+  ],
+  "labels": {
+    "hard_constraints": {
+      "data_sensitivity": "external_ok",
+      "irreversible_side_effects": false,
+      "required_capabilities": [
+        "tool_use"
+      ],
+      "latency": "interactive",
+      "budget_cap_usd": null
+    },
+    "dimensions": {
+      "difficulty": 0,
+      "ambiguity": 0,
+      "scope": 0,
+      "verifiability": 2,
+      "consistency": 0,
+      "capabilities": {
+        "long_context": 0,
+        "multi_step_tools": 1,
+        "code_correctness": 0,
+        "instruction_following": 0,
+        "korean_writing": 1,
+        "reasoning": 0
+      }
+    }
+  },
+  "verification": {
+    "type": "rubric",
+    "rubric": [
+      {
+        "id": "filter",
+        "criterion": "sku가 같은 항목을 제거한 새 items 배열을 만든다고 설명한다",
+        "must": true
+      },
+      {
+        "id": "coupon_clear",
+        "criterion": "제거 후 장바구니가 비면 couponCode를 null로 만든다고 설명한다",
+        "must": true
+      },
+      {
+        "id": "immutable",
+        "criterion": "기존 state를 바꾸지 않고 새 객체를 반환한다고 설명한다",
+        "must": false
+      },
+      {
+        "id": "set_qty_link",
+        "criterion": "SET_QTY가 0 이하일 때 REMOVE_ITEM으로 처리된다는 연관을 언급한다",
+        "must": false
+      },
+      {
+        "id": "no_fabrication",
+        "criterion": "코드에 없는 동작을 지어내지 않는다",
+        "must": true
+      }
+    ],
+    "pass_threshold": 0.75
+  },
+  "expected_tier_hypothesis": "local",
+  "expected_thinking_hypothesis": "off"
+}

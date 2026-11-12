@@ -1,0 +1,7 @@
+a1f3c2e feat(service): 부분 환불 API refundLines 추가
+9b2d771 fix(pricing): GOLD 등급 할인 반올림을 내림으로 수정
+5c88e01 feat(service): placeOrder 멱등 키 옵션 지원
+e04aa19 chore(deps): 개발 도구 버전 갱신
+77d0b3a fix(service): 재고 부족 실패 시 예약하지 않은 라인까지 해제하던 문제 수정
+c3e9f10 refactor(pricing): 할인 계산을 단계 목록으로 분리 (동작 변화 없음)
+2f61aa4 feat(config): 라인당 최대 수량 99 → 50

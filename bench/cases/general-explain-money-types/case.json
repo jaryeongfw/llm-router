@@ -1,0 +1,75 @@
+{
+  "budget": {
+    "max_turns": 40,
+    "timeout_s": 900
+  },
+  "id": "general-explain-money-types",
+  "fixture": null,
+  "task_type": {
+    "domain": "general",
+    "action": "explain"
+  },
+  "summary": "JS에서 금액에 부동소수를 쓰면 안 되는 이유",
+  "prompt": "JavaScript에서 금액 계산에 number(부동소수점)를 그대로 쓰면 어떤 문제가 생기고, 대신 어떻게 하는 게 좋은지 짧게 설명해 주세요.",
+  "rewrites": [
+    "JS에서 돈 계산할 때 float을 쓰면 왜 위험한지, 대안은 뭔지 간단히 알려 주세요.",
+    "자바스크립트 금액 계산 시 number 쓰면 생기는 문제와 권장 방식?"
+  ],
+  "labels": {
+    "hard_constraints": {
+      "data_sensitivity": "external_ok",
+      "irreversible_side_effects": false,
+      "required_capabilities": [],
+      "latency": "interactive",
+      "budget_cap_usd": null
+    },
+    "dimensions": {
+      "difficulty": 0,
+      "ambiguity": 0,
+      "scope": 0,
+      "verifiability": 2,
+      "consistency": 0,
+      "capabilities": {
+        "long_context": 0,
+        "multi_step_tools": 0,
+        "code_correctness": 0,
+        "instruction_following": 1,
+        "korean_writing": 1,
+        "reasoning": 1
+      }
+    }
+  },
+  "verification": {
+    "type": "rubric",
+    "rubric": [
+      {
+        "id": "binary_fraction",
+        "criterion": "0.1 + 0.2 같은 이진 부동소수 표현 오차를 예로 설명한다",
+        "must": true
+      },
+      {
+        "id": "alternatives",
+        "criterion": "최소 단위 정수(원·센트), BigInt, 십진 라이브러리 중 하나 이상을 대안으로 제시한다",
+        "must": true
+      },
+      {
+        "id": "rounding_policy",
+        "criterion": "반올림·내림 시점을 정책으로 정해야 한다는 점을 언급한다",
+        "must": false
+      },
+      {
+        "id": "safe_integer",
+        "criterion": "Number.MAX_SAFE_INTEGER 한계를 언급한다",
+        "must": false
+      },
+      {
+        "id": "concise",
+        "criterion": "요청대로 짧다(대략 15문장 이내)",
+        "must": false
+      }
+    ],
+    "pass_threshold": 0.75
+  },
+  "expected_tier_hypothesis": "local",
+  "expected_thinking_hypothesis": "off"
+}

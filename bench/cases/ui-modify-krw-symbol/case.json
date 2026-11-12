@@ -1,0 +1,51 @@
+{
+  "budget": {
+    "max_turns": 40,
+    "timeout_s": 900
+  },
+  "id": "ui-modify-krw-symbol",
+  "fixture": "ui-utils",
+  "task_type": {
+    "domain": "frontend",
+    "action": "code_modify"
+  },
+  "summary": "금액 표시 형식 변경 (₩ 접두)",
+  "prompt": "금액 표시 형식을 `1,234원`에서 `₩1,234`로 바꿔 주세요. 음수는 `-₩1,234`로 표시합니다. 기존 테스트도 새 형식에 맞게 고쳐 주세요.",
+  "rewrites": [
+    "formatKRW 출력 형식을 '₩1,234' 스타일로 변경해 주세요(음수 '-₩1,234'). 테스트도 갱신해 주세요.",
+    "금액 포맷 '원' 접미사 말고 ₩ 접두로 바꿔줘. -₩1,234 형태. 테스트 수정 포함."
+  ],
+  "labels": {
+    "hard_constraints": {
+      "data_sensitivity": "external_ok",
+      "irreversible_side_effects": false,
+      "required_capabilities": [
+        "tool_use"
+      ],
+      "latency": "interactive",
+      "budget_cap_usd": null
+    },
+    "dimensions": {
+      "difficulty": 0,
+      "ambiguity": 0,
+      "scope": 0,
+      "verifiability": 0,
+      "consistency": 0,
+      "capabilities": {
+        "long_context": 0,
+        "multi_step_tools": 1,
+        "code_correctness": 1,
+        "instruction_following": 1,
+        "korean_writing": 0,
+        "reasoning": 0
+      }
+    }
+  },
+  "verification": {
+    "type": "command",
+    "command": "npm test",
+    "timeout_s": 120
+  },
+  "expected_tier_hypothesis": "local",
+  "expected_thinking_hypothesis": "off"
+}

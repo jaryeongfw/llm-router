@@ -1,0 +1,51 @@
+{
+  "budget": {
+    "max_turns": 40,
+    "timeout_s": 900
+  },
+  "id": "orders-modify-max-qty",
+  "fixture": "orders-service",
+  "task_type": {
+    "domain": "backend",
+    "action": "code_modify"
+  },
+  "summary": "라인당 최대 수량 99 → 50",
+  "prompt": "주문 라인당 최대 수량을 99개에서 50개로 줄여 주세요.",
+  "rewrites": [
+    "라인별 수량 상한을 50으로 변경해 주세요. 지금은 99입니다.",
+    "MAX 수량 99→50으로 바꿔줘."
+  ],
+  "labels": {
+    "hard_constraints": {
+      "data_sensitivity": "external_ok",
+      "irreversible_side_effects": false,
+      "required_capabilities": [
+        "tool_use"
+      ],
+      "latency": "interactive",
+      "budget_cap_usd": null
+    },
+    "dimensions": {
+      "difficulty": 0,
+      "ambiguity": 0,
+      "scope": 0,
+      "verifiability": 0,
+      "consistency": 0,
+      "capabilities": {
+        "long_context": 0,
+        "multi_step_tools": 1,
+        "code_correctness": 1,
+        "instruction_following": 1,
+        "korean_writing": 0,
+        "reasoning": 0
+      }
+    }
+  },
+  "verification": {
+    "type": "command",
+    "command": "npm test",
+    "timeout_s": 120
+  },
+  "expected_tier_hypothesis": "local",
+  "expected_thinking_hypothesis": "off"
+}

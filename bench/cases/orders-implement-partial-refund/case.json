@@ -1,0 +1,51 @@
+{
+  "budget": {
+    "max_turns": 40,
+    "timeout_s": 900
+  },
+  "id": "orders-implement-partial-refund",
+  "fixture": "orders-service",
+  "task_type": {
+    "domain": "backend",
+    "action": "implement"
+  },
+  "summary": "부분 환불 API (할인 비례 배분)",
+  "prompt": "OrderService에 부분 환불 메서드 `refundLines(orderId: string, lineIndexes: number[]): { order: Order; refundAmount: number }`를 추가해 주세요. 규칙은 docs/pricing-policy.md 7절을 따르고, 이미 환불된 라인·범위 밖 인덱스·빈 목록은 ValidationError, 환불할 수 없는 상태의 주문은 InvalidStateError로 처리해 주세요.",
+  "rewrites": [
+    "주문 일부 라인만 환불하는 refundLines(orderId, lineIndexes)를 OrderService에 구현해 주세요. 반환은 { order, refundAmount }. 정책은 pricing-policy.md 7절. 잘못된 인덱스·중복 환불은 ValidationError, 상태 오류는 InvalidStateError.",
+    "부분 환불 기능 추가 요청: OrderService.refundLines(orderId: string, lineIndexes: number[]) → { order, refundAmount }. 정책 문서 7절 준수, 오류 처리는 ValidationError / InvalidStateError."
+  ],
+  "labels": {
+    "hard_constraints": {
+      "data_sensitivity": "external_ok",
+      "irreversible_side_effects": false,
+      "required_capabilities": [
+        "tool_use"
+      ],
+      "latency": "interactive",
+      "budget_cap_usd": null
+    },
+    "dimensions": {
+      "difficulty": 2,
+      "ambiguity": 0,
+      "scope": 1,
+      "verifiability": 0,
+      "consistency": 0,
+      "capabilities": {
+        "long_context": 1,
+        "multi_step_tools": 2,
+        "code_correctness": 2,
+        "instruction_following": 2,
+        "korean_writing": 0,
+        "reasoning": 2
+      }
+    }
+  },
+  "verification": {
+    "type": "command",
+    "command": "npm test",
+    "timeout_s": 120
+  },
+  "expected_tier_hypothesis": "standard",
+  "expected_thinking_hypothesis": "high"
+}

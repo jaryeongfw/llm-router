@@ -1,0 +1,51 @@
+{
+  "budget": {
+    "max_turns": 40,
+    "timeout_s": 900
+  },
+  "id": "ops-modify-dry-run",
+  "fixture": "ops-scripts",
+  "task_type": {
+    "domain": "infra",
+    "action": "code_modify"
+  },
+  "summary": "정리 스크립트에 --dry-run 추가",
+  "prompt": "cleanup_tmp.sh에 `--dry-run` 옵션을 추가해 주세요. `cleanup_tmp.sh --dry-run <dir> <days>`로 실행하면 아무것도 지우지 않고 대상 파일마다 `삭제 예정: <경로>`를 출력합니다. 옵션 없이 실행하면 지금과 똑같이 동작해야 합니다.",
+  "rewrites": [
+    "cleanup_tmp.sh에 첫 인자로 --dry-run을 받을 수 있게 해 주세요. 이 경우 삭제 없이 '삭제 예정: <경로>'만 출력. 옵션 없을 때 동작은 그대로.",
+    "cleanup_tmp.sh 드라이런 모드 추가: --dry-run <dir> <days>, 출력 '삭제 예정: 경로', 실제 삭제 X. 기존 사용법 호환 유지."
+  ],
+  "labels": {
+    "hard_constraints": {
+      "data_sensitivity": "external_ok",
+      "irreversible_side_effects": false,
+      "required_capabilities": [
+        "tool_use"
+      ],
+      "latency": "interactive",
+      "budget_cap_usd": null
+    },
+    "dimensions": {
+      "difficulty": 1,
+      "ambiguity": 0,
+      "scope": 0,
+      "verifiability": 0,
+      "consistency": 0,
+      "capabilities": {
+        "long_context": 0,
+        "multi_step_tools": 1,
+        "code_correctness": 1,
+        "instruction_following": 2,
+        "korean_writing": 0,
+        "reasoning": 0
+      }
+    }
+  },
+  "verification": {
+    "type": "command",
+    "command": "npm test",
+    "timeout_s": 120
+  },
+  "expected_tier_hypothesis": "local",
+  "expected_thinking_hypothesis": "off"
+}

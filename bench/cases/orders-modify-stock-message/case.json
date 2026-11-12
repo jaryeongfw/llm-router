@@ -1,0 +1,51 @@
+{
+  "budget": {
+    "max_turns": 40,
+    "timeout_s": 900
+  },
+  "id": "orders-modify-stock-message",
+  "fixture": "orders-service",
+  "task_type": {
+    "domain": "backend",
+    "action": "code_modify"
+  },
+  "summary": "재고 부족 오류 메시지 형식 변경",
+  "prompt": "재고 부족 오류 메시지를 `재고 부족: {sku} (요청 {요청수량}, 가용 {가용수량})` 형식으로 바꿔 주세요. 예: `재고 부족: SKU-9 (요청 5, 가용 2)`",
+  "rewrites": [
+    "OutOfStockError 메시지에 SKU와 요청·가용 수량이 보이게 해 주세요. 형식은 `재고 부족: SKU-9 (요청 5, 가용 2)`입니다.",
+    "재고 부족 에러 문구가 너무 짧아. '재고 부족: <sku> (요청 N, 가용 M)' 형태로 바꿔줘."
+  ],
+  "labels": {
+    "hard_constraints": {
+      "data_sensitivity": "external_ok",
+      "irreversible_side_effects": false,
+      "required_capabilities": [
+        "tool_use"
+      ],
+      "latency": "interactive",
+      "budget_cap_usd": null
+    },
+    "dimensions": {
+      "difficulty": 1,
+      "ambiguity": 0,
+      "scope": 0,
+      "verifiability": 0,
+      "consistency": 0,
+      "capabilities": {
+        "long_context": 0,
+        "multi_step_tools": 1,
+        "code_correctness": 1,
+        "instruction_following": 2,
+        "korean_writing": 0,
+        "reasoning": 0
+      }
+    }
+  },
+  "verification": {
+    "type": "command",
+    "command": "npm test",
+    "timeout_s": 120
+  },
+  "expected_tier_hypothesis": "local",
+  "expected_thinking_hypothesis": "off"
+}

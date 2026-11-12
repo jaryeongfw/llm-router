@@ -1,0 +1,82 @@
+{
+  "budget": {
+    "max_turns": 40,
+    "timeout_s": 900
+  },
+  "id": "orders-explain-place-flow",
+  "fixture": "orders-service",
+  "task_type": {
+    "domain": "backend",
+    "action": "explain"
+  },
+  "summary": "placeOrder 처리 순서와 실패 시 동작 설명",
+  "prompt": "OrderService.placeOrder가 어떤 순서로 처리되는지, 중간에 실패하면 어떻게 되는지 설명해 주세요.",
+  "rewrites": [
+    "placeOrder의 처리 흐름과 실패 시 롤백 동작을 알려 주세요.",
+    "주문 생성 함수 내부 흐름 설명 좀. 실패하면 재고는 어떻게 돼?"
+  ],
+  "labels": {
+    "hard_constraints": {
+      "data_sensitivity": "external_ok",
+      "irreversible_side_effects": false,
+      "required_capabilities": [
+        "tool_use"
+      ],
+      "latency": "interactive",
+      "budget_cap_usd": null
+    },
+    "dimensions": {
+      "difficulty": 1,
+      "ambiguity": 0,
+      "scope": 1,
+      "verifiability": 2,
+      "consistency": 0,
+      "capabilities": {
+        "long_context": 0,
+        "multi_step_tools": 1,
+        "code_correctness": 0,
+        "instruction_following": 0,
+        "korean_writing": 1,
+        "reasoning": 1
+      }
+    }
+  },
+  "verification": {
+    "type": "rubric",
+    "rubric": [
+      {
+        "id": "validate_first",
+        "criterion": "재고 예약 전에 입력 검증(빈 라인, 수량 1~99 정수, 단가 0 이상 정수)을 하고 위반 시 ValidationError라고 설명한다",
+        "must": true
+      },
+      {
+        "id": "reserve_sequential",
+        "criterion": "라인 순서대로 재고를 예약한다고 설명한다",
+        "must": true
+      },
+      {
+        "id": "rollback",
+        "criterion": "예약 중 실패하면 이미 예약한 라인만 해제하고 오류를 다시 던진다고 설명한다",
+        "must": true
+      },
+      {
+        "id": "price_after",
+        "criterion": "가격 계산과 저장은 예약이 모두 성공한 뒤에 일어난다고 설명한다",
+        "must": false
+      },
+      {
+        "id": "status_id",
+        "criterion": "상태 PLACED와 순차 ID(O-0001 형식)로 저장한다고 설명한다",
+        "must": false
+      },
+      {
+        "id": "no_fabrication",
+        "criterion": "코드에 없는 동작(트랜잭션, 결제 호출 등)을 지어내지 않는다",
+        "must": true
+      }
+    ],
+    "pass_threshold": 0.75
+  },
+  "expected_tier_hypothesis": "light",
+  "expected_thinking_hypothesis": "low"
+}

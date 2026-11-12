@@ -1,0 +1,51 @@
+{
+  "budget": {
+    "max_turns": 40,
+    "timeout_s": 900
+  },
+  "id": "orders-debug-coupon-policy",
+  "fixture": "orders-service",
+  "task_type": {
+    "domain": "backend",
+    "action": "debug"
+  },
+  "summary": "쿠폰 계산 인자 뒤바뀜 (최소 주문 조건·정률 기준 금액)",
+  "prompt": "VIP 고객이 쿠폰을 쓸 때 결제 금액이 정책과 다르다는 CS가 여러 건 들어왔어요. 어떤 건은 쿠폰이 안 먹고, 어떤 건은 할인이 더 많이 들어간대요. docs/pricing-policy.md 기준으로 맞춰 주세요.",
+  "rewrites": [
+    "쿠폰 적용 결과가 가격 정책과 안 맞는다는 문의가 있습니다(VIP 위주). 정책 문서를 기준으로 원인 찾고 고쳐 주세요.",
+    "VIP+쿠폰 조합에서 금액 이상 제보 다수. 쿠폰 미적용 또는 과다 할인. 정책대로 수정 바람."
+  ],
+  "labels": {
+    "hard_constraints": {
+      "data_sensitivity": "external_ok",
+      "irreversible_side_effects": false,
+      "required_capabilities": [
+        "tool_use"
+      ],
+      "latency": "interactive",
+      "budget_cap_usd": null
+    },
+    "dimensions": {
+      "difficulty": 3,
+      "ambiguity": 1,
+      "scope": 1,
+      "verifiability": 0,
+      "consistency": 0,
+      "capabilities": {
+        "long_context": 1,
+        "multi_step_tools": 2,
+        "code_correctness": 2,
+        "instruction_following": 1,
+        "korean_writing": 0,
+        "reasoning": 3
+      }
+    }
+  },
+  "verification": {
+    "type": "command",
+    "command": "npm test",
+    "timeout_s": 120
+  },
+  "expected_tier_hypothesis": "heavy",
+  "expected_thinking_hypothesis": "xhigh"
+}

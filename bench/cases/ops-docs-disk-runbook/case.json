@@ -1,0 +1,75 @@
+{
+  "budget": {
+    "max_turns": 40,
+    "timeout_s": 900
+  },
+  "id": "ops-docs-disk-runbook",
+  "fixture": "ops-scripts",
+  "task_type": {
+    "domain": "docs",
+    "action": "docs_write"
+  },
+  "summary": "디스크 경고 런북 작성",
+  "prompt": "디스크 사용률 경고 대응 런북을 docs/RUNBOOK-disk.md에 한국어로 작성해 주세요. 절은 `## 증상`, `## 확인`, `## 조치`, `## 확인 후 마무리`로 하고, 저장소의 check_disk.sh, rotate_logs.sh, cleanup_tmp.sh 사용법을 실제 인자 형식대로 넣어 주세요.",
+  "rewrites": [
+    "docs/RUNBOOK-disk.md에 디스크 경고 대응 절차를 써 주세요(한국어). 절: 증상 / 확인 / 조치 / 확인 후 마무리. 세 스크립트(check_disk, rotate_logs, cleanup_tmp)를 실제 사용법대로 포함.",
+    "디스크 알람 런북 작성 부탁. 파일 docs/RUNBOOK-disk.md, 섹션 ## 증상 ## 확인 ## 조치 ## 확인 후 마무리, scripts/ 세 개 사용법 정확히."
+  ],
+  "labels": {
+    "hard_constraints": {
+      "data_sensitivity": "external_ok",
+      "irreversible_side_effects": false,
+      "required_capabilities": [
+        "tool_use"
+      ],
+      "latency": "interactive",
+      "budget_cap_usd": null
+    },
+    "dimensions": {
+      "difficulty": 2,
+      "ambiguity": 0,
+      "scope": 1,
+      "verifiability": 1,
+      "consistency": 1,
+      "capabilities": {
+        "long_context": 0,
+        "multi_step_tools": 1,
+        "code_correctness": 0,
+        "instruction_following": 2,
+        "korean_writing": 2,
+        "reasoning": 1
+      }
+    }
+  },
+  "verification": {
+    "type": "hybrid",
+    "artifact": "docs/RUNBOOK-disk.md",
+    "rubric": [
+      {
+        "id": "usage_correct",
+        "criterion": "세 스크립트의 인자 순서와 의미가 실제 스크립트와 일치한다",
+        "must": true
+      },
+      {
+        "id": "safe_order",
+        "criterion": "삭제 전에 대상을 확인하는 단계(예: 목록 확인)를 두고, 무차별 삭제 명령을 권하지 않는다",
+        "must": true
+      },
+      {
+        "id": "exit_code",
+        "criterion": "check_disk.sh의 종료 코드 의미(임계값 이상이면 1)를 반영한다",
+        "must": false
+      },
+      {
+        "id": "korean_quality",
+        "criterion": "한국어가 간결하고 절차가 번호 순서로 정리되어 있다",
+        "must": false
+      }
+    ],
+    "pass_threshold": 0.75,
+    "command": "npm test",
+    "timeout_s": 120
+  },
+  "expected_tier_hypothesis": "standard",
+  "expected_thinking_hypothesis": "low"
+}

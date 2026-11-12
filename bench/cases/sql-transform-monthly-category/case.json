@@ -1,0 +1,51 @@
+{
+  "budget": {
+    "max_turns": 40,
+    "timeout_s": 900
+  },
+  "id": "sql-transform-monthly-category",
+  "fixture": "sales-reports",
+  "task_type": {
+    "domain": "data",
+    "action": "data_transform"
+  },
+  "summary": "월별·카테고리별 매출 쿼리",
+  "prompt": "queries/monthly_category_revenue.sql에 월별·카테고리별 매출 쿼리를 작성해 주세요. 열은 month(YYYY-MM), category(카테고리 이름), revenue이고, 취소 주문은 제외, month와 category 순으로 정렬해 주세요.",
+  "rewrites": [
+    "월(YYYY-MM)과 카테고리명별 매출 합계를 구하는 SQL을 queries/monthly_category_revenue.sql로 만들어 주세요. 취소 제외, 열 이름 month/category/revenue, 정렬은 month, category.",
+    "SQL 하나 부탁: 월별 카테고리 매출. 파일 queries/monthly_category_revenue.sql, 컬럼 month, category, revenue. CANCELLED 빼고 month→category 정렬."
+  ],
+  "labels": {
+    "hard_constraints": {
+      "data_sensitivity": "external_ok",
+      "irreversible_side_effects": false,
+      "required_capabilities": [
+        "tool_use"
+      ],
+      "latency": "interactive",
+      "budget_cap_usd": null
+    },
+    "dimensions": {
+      "difficulty": 1,
+      "ambiguity": 0,
+      "scope": 0,
+      "verifiability": 0,
+      "consistency": 0,
+      "capabilities": {
+        "long_context": 0,
+        "multi_step_tools": 1,
+        "code_correctness": 2,
+        "instruction_following": 1,
+        "korean_writing": 0,
+        "reasoning": 1
+      }
+    }
+  },
+  "verification": {
+    "type": "command",
+    "command": "npm test",
+    "timeout_s": 120
+  },
+  "expected_tier_hypothesis": "local",
+  "expected_thinking_hypothesis": "off"
+}

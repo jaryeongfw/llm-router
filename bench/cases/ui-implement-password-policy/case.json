@@ -1,0 +1,51 @@
+{
+  "budget": {
+    "max_turns": 40,
+    "timeout_s": 900
+  },
+  "id": "ui-implement-password-policy",
+  "fixture": "ui-utils",
+  "task_type": {
+    "domain": "frontend",
+    "action": "implement"
+  },
+  "summary": "비밀번호 정책 검증 함수",
+  "prompt": "src/validate.ts에 `validatePassword(pw: string): FieldError[]`를 추가해 주세요. field는 \"password\"이고, 위반한 규칙의 code를 다음 순서대로 모두 반환합니다: TOO_SHORT(10자 미만), TOO_LONG(64자 초과), NO_LETTER(영문자 없음), NO_DIGIT(숫자 없음), NO_SYMBOL(영문·숫자·공백이 아닌 문자 없음), HAS_SPACE(공백 포함), REPEATED_CHAR(같은 문자 4번 이상 연속).",
+  "rewrites": [
+    "비밀번호 검증 validatePassword(pw)를 validate.ts에 구현해 주세요. 반환은 FieldError[](field: 'password'), 코드 순서: TOO_SHORT(<10) → TOO_LONG(>64) → NO_LETTER → NO_DIGIT → NO_SYMBOL(영숫자·공백 외 문자 필요) → HAS_SPACE → REPEATED_CHAR(동일 문자 4연속).",
+    "validate.ts에 비번 정책 함수 추가: validatePassword. 위반 코드 전부 순서대로 TOO_SHORT/TOO_LONG/NO_LETTER/NO_DIGIT/NO_SYMBOL/HAS_SPACE/REPEATED_CHAR. 길이 10~64, 같은 문자 4번 연속 금지."
+  ],
+  "labels": {
+    "hard_constraints": {
+      "data_sensitivity": "external_ok",
+      "irreversible_side_effects": false,
+      "required_capabilities": [
+        "tool_use"
+      ],
+      "latency": "interactive",
+      "budget_cap_usd": null
+    },
+    "dimensions": {
+      "difficulty": 1,
+      "ambiguity": 0,
+      "scope": 0,
+      "verifiability": 0,
+      "consistency": 0,
+      "capabilities": {
+        "long_context": 0,
+        "multi_step_tools": 1,
+        "code_correctness": 2,
+        "instruction_following": 2,
+        "korean_writing": 0,
+        "reasoning": 1
+      }
+    }
+  },
+  "verification": {
+    "type": "command",
+    "command": "npm test",
+    "timeout_s": 120
+  },
+  "expected_tier_hypothesis": "light",
+  "expected_thinking_hypothesis": "low"
+}

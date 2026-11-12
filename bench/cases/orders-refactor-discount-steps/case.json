@@ -1,0 +1,51 @@
+{
+  "budget": {
+    "max_turns": 40,
+    "timeout_s": 900
+  },
+  "id": "orders-refactor-discount-steps",
+  "fixture": "orders-service",
+  "task_type": {
+    "domain": "backend",
+    "action": "refactor"
+  },
+  "summary": "할인 계산을 단계 목록으로 리팩터링",
+  "prompt": "pricing.ts의 할인 계산을 단계 목록 구조로 리팩터링해 주세요. `export const DISCOUNT_STEPS: DiscountStep[]`를 두고(각 단계는 지금까지의 금액 등 컨텍스트를 받아 할인액을 반환하는 함수), priceOrder가 이 목록을 순서대로 적용하게 해 주세요. priceOrder의 결과는 지금과 완전히 같아야 합니다.",
+  "rewrites": [
+    "할인 로직을 확장하기 쉽게 pricing.ts에 DISCOUNT_STEPS(할인 단계 함수 배열)를 export하고 priceOrder가 그걸 차례로 적용하도록 바꿔 주세요. 동작 변화는 없어야 해요.",
+    "pricing.ts 리팩터링: DISCOUNT_STEPS 배열(단계별 할인 함수)로 등급 할인·쿠폰을 표현하고 priceOrder는 순회만. 결과값 불변."
+  ],
+  "labels": {
+    "hard_constraints": {
+      "data_sensitivity": "external_ok",
+      "irreversible_side_effects": false,
+      "required_capabilities": [
+        "tool_use"
+      ],
+      "latency": "interactive",
+      "budget_cap_usd": null
+    },
+    "dimensions": {
+      "difficulty": 2,
+      "ambiguity": 1,
+      "scope": 1,
+      "verifiability": 0,
+      "consistency": 1,
+      "capabilities": {
+        "long_context": 0,
+        "multi_step_tools": 2,
+        "code_correctness": 2,
+        "instruction_following": 2,
+        "korean_writing": 0,
+        "reasoning": 2
+      }
+    }
+  },
+  "verification": {
+    "type": "command",
+    "command": "npm test",
+    "timeout_s": 120
+  },
+  "expected_tier_hypothesis": "standard",
+  "expected_thinking_hypothesis": "medium"
+}

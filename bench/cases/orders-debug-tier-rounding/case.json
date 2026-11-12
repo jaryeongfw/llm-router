@@ -1,0 +1,51 @@
+{
+  "budget": {
+    "max_turns": 40,
+    "timeout_s": 900
+  },
+  "id": "orders-debug-tier-rounding",
+  "fixture": "orders-service",
+  "task_type": {
+    "domain": "backend",
+    "action": "debug"
+  },
+  "summary": "등급 할인 반올림 버그 (1원 차이)",
+  "prompt": "GOLD 등급 고객 주문의 결제 금액이 가격 정책 문서(docs/pricing-policy.md)보다 1원 적게 나오는 경우가 있다는 문의가 들어왔어요. 원인을 찾아서 고쳐 주세요.",
+  "rewrites": [
+    "일부 등급 할인 주문에서 결제 금액이 정책보다 1원씩 덜 계산됩니다. 정책 문서 기준으로 원인 파악하고 수정 부탁해요.",
+    "가격 계산이 docs/pricing-policy.md와 1원 어긋나는 케이스가 있어. GOLD 등급에서 재현된대. 고쳐줘."
+  ],
+  "labels": {
+    "hard_constraints": {
+      "data_sensitivity": "external_ok",
+      "irreversible_side_effects": false,
+      "required_capabilities": [
+        "tool_use"
+      ],
+      "latency": "interactive",
+      "budget_cap_usd": null
+    },
+    "dimensions": {
+      "difficulty": 1,
+      "ambiguity": 0,
+      "scope": 1,
+      "verifiability": 0,
+      "consistency": 0,
+      "capabilities": {
+        "long_context": 0,
+        "multi_step_tools": 1,
+        "code_correctness": 1,
+        "instruction_following": 0,
+        "korean_writing": 0,
+        "reasoning": 1
+      }
+    }
+  },
+  "verification": {
+    "type": "command",
+    "command": "npm test",
+    "timeout_s": 120
+  },
+  "expected_tier_hypothesis": "local",
+  "expected_thinking_hypothesis": "off"
+}

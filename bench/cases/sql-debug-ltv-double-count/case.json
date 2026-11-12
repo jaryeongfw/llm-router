@@ -1,0 +1,51 @@
+{
+  "budget": {
+    "max_turns": 40,
+    "timeout_s": 900
+  },
+  "id": "sql-debug-ltv-double-count",
+  "fixture": "sales-reports",
+  "task_type": {
+    "domain": "data",
+    "action": "debug"
+  },
+  "summary": "조인 팬아웃으로 인한 중복 집계",
+  "prompt": "고객별 누적 결제 리포트(queries/customer_ltv.sql)의 금액이 결제 시스템 합계보다 크게 나와요. 구매 수량(items) 열은 유지하면서 고쳐 주세요.",
+  "rewrites": [
+    "customer_ltv.sql 결과의 ltv 합계가 실제 결제 총액보다 큽니다. items 열은 그대로 두고 원인 수정 부탁드려요.",
+    "LTV 리포트 금액 뻥튀기됨(결제 합계보다 큼). customer_ltv.sql 고쳐줘, items 컬럼은 남기고."
+  ],
+  "labels": {
+    "hard_constraints": {
+      "data_sensitivity": "external_ok",
+      "irreversible_side_effects": false,
+      "required_capabilities": [
+        "tool_use"
+      ],
+      "latency": "interactive",
+      "budget_cap_usd": null
+    },
+    "dimensions": {
+      "difficulty": 2,
+      "ambiguity": 0,
+      "scope": 0,
+      "verifiability": 0,
+      "consistency": 0,
+      "capabilities": {
+        "long_context": 0,
+        "multi_step_tools": 1,
+        "code_correctness": 2,
+        "instruction_following": 1,
+        "korean_writing": 0,
+        "reasoning": 2
+      }
+    }
+  },
+  "verification": {
+    "type": "command",
+    "command": "npm test",
+    "timeout_s": 120
+  },
+  "expected_tier_hypothesis": "standard",
+  "expected_thinking_hypothesis": "high"
+}

@@ -1,0 +1,77 @@
+{
+  "budget": {
+    "max_turns": 40,
+    "timeout_s": 900
+  },
+  "id": "sql-design-report-cache",
+  "fixture": "sales-reports",
+  "task_type": {
+    "domain": "data",
+    "action": "design"
+  },
+  "summary": "리포트 쿼리 캐시·사전 집계 전략",
+  "prompt": "리포트 쿼리들이 데이터가 늘면서 느려지고 있어요. 캐시나 사전 집계 테이블 같은 방안을 비교하고, 취소·분할 결제처럼 나중에 바뀌는 데이터를 어떻게 반영할지 포함해서 권고안을 주세요. 코드는 수정하지 마세요.",
+  "rewrites": [
+    "리포트 성능 개선 설계를 부탁합니다. 결과 캐시, 사전 집계 등 대안을 비교하고, 주문 취소나 결제 추가처럼 사후 변경 데이터의 갱신 방법을 포함해 추천해 주세요. 구현은 하지 마세요.",
+    "리포트 느림. 캐시 vs 집계 테이블 등 옵션 비교 + 취소/분할결제 반영 방법 + 추천안. 코드 변경 없이 설계만."
+  ],
+  "labels": {
+    "hard_constraints": {
+      "data_sensitivity": "external_ok",
+      "irreversible_side_effects": false,
+      "required_capabilities": [
+        "tool_use"
+      ],
+      "latency": "interactive",
+      "budget_cap_usd": null
+    },
+    "dimensions": {
+      "difficulty": 2,
+      "ambiguity": 2,
+      "scope": 1,
+      "verifiability": 3,
+      "consistency": 1,
+      "capabilities": {
+        "long_context": 0,
+        "multi_step_tools": 1,
+        "code_correctness": 0,
+        "instruction_following": 1,
+        "korean_writing": 2,
+        "reasoning": 2
+      }
+    }
+  },
+  "verification": {
+    "type": "rubric",
+    "rubric": [
+      {
+        "id": "options",
+        "criterion": "서로 다른 방안을 2개 이상 비교한다(예: 결과 캐시, 사전 집계 테이블, 인덱스, 머티리얼라이즈드 뷰)",
+        "must": true
+      },
+      {
+        "id": "late_changes",
+        "criterion": "취소·분할 결제 등 사후 변경을 반영하는 갱신 방법(재계산 범위, 이벤트 기반 갱신, 무효화)을 구체적으로 다룬다",
+        "must": true
+      },
+      {
+        "id": "correctness_tradeoff",
+        "criterion": "신선도와 정확성의 트레이드오프를 설명한다",
+        "must": false
+      },
+      {
+        "id": "indexes",
+        "criterion": "현재 스키마에 필요한 인덱스(예: orders(status, ordered_at), payments(order_id))를 언급한다",
+        "must": false
+      },
+      {
+        "id": "recommendation",
+        "criterion": "근거와 함께 하나의 권고안을 낸다",
+        "must": true
+      }
+    ],
+    "pass_threshold": 0.75
+  },
+  "expected_tier_hypothesis": "heavy",
+  "expected_thinking_hypothesis": "high"
+}

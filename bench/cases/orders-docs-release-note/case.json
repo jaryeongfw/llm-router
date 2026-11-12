@@ -1,0 +1,70 @@
+{
+  "budget": {
+    "max_turns": 40,
+    "timeout_s": 900
+  },
+  "id": "orders-docs-release-note",
+  "fixture": "orders-service",
+  "task_type": {
+    "domain": "docs",
+    "action": "docs_write"
+  },
+  "summary": "커밋 목록으로 릴리스 노트 작성",
+  "prompt": "notes/commits.txt의 커밋 목록으로 CHANGELOG.md에 1.2.0 릴리스 노트를 한국어로 작성해 주세요. 제목은 `## [1.2.0] - 2026-11-20`, 소제목은 `### 추가`, `### 변경`, `### 수정`을 쓰고, 사용자에게 의미 없는 내부 작업(의존성 갱신, 동작 변화 없는 리팩터링)은 빼 주세요.",
+  "rewrites": [
+    "notes/commits.txt를 보고 CHANGELOG.md에 버전 1.2.0(2026-11-20) 항목을 써 주세요. 추가/변경/수정으로 나누고 내부 작업은 제외. 한국어로요.",
+    "릴리스 노트 작성: CHANGELOG.md, '## [1.2.0] - 2026-11-20', ### 추가/변경/수정, 커밋은 notes/commits.txt. chore/refactor 제외."
+  ],
+  "labels": {
+    "hard_constraints": {
+      "data_sensitivity": "external_ok",
+      "irreversible_side_effects": false,
+      "required_capabilities": [
+        "tool_use"
+      ],
+      "latency": "interactive",
+      "budget_cap_usd": null
+    },
+    "dimensions": {
+      "difficulty": 1,
+      "ambiguity": 0,
+      "scope": 0,
+      "verifiability": 1,
+      "consistency": 2,
+      "capabilities": {
+        "long_context": 0,
+        "multi_step_tools": 1,
+        "code_correctness": 0,
+        "instruction_following": 2,
+        "korean_writing": 2,
+        "reasoning": 1
+      }
+    }
+  },
+  "verification": {
+    "type": "hybrid",
+    "artifact": "CHANGELOG.md",
+    "rubric": [
+      {
+        "id": "classified",
+        "criterion": "각 사용자 영향 커밋이 올바른 소제목(추가/변경/수정)에 들어갔다",
+        "must": true
+      },
+      {
+        "id": "excluded",
+        "criterion": "의존성 갱신과 동작 변화 없는 리팩터링이 빠졌다",
+        "must": true
+      },
+      {
+        "id": "user_language",
+        "criterion": "커밋 메시지를 그대로 옮기지 않고 사용자 관점으로 풀어 썼다",
+        "must": false
+      }
+    ],
+    "pass_threshold": 0.75,
+    "command": "npm test",
+    "timeout_s": 120
+  },
+  "expected_tier_hypothesis": "light",
+  "expected_thinking_hypothesis": "low"
+}

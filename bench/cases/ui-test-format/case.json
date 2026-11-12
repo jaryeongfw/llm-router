@@ -1,0 +1,60 @@
+{
+  "budget": {
+    "max_turns": 40,
+    "timeout_s": 900
+  },
+  "id": "ui-test-format",
+  "fixture": "ui-utils",
+  "task_type": {
+    "domain": "frontend",
+    "action": "test_write"
+  },
+  "summary": "formatBytes·relativeTime 테스트 (돌연변이 검증)",
+  "prompt": "src/format.ts의 formatBytes와 relativeTime에 대한 테스트를 test/format-more.test.ts에 작성해 주세요. 단위가 바뀌는 경계와 표시 형식을 꼼꼼히 확인해 주세요. 소스 코드는 수정하지 마세요.",
+  "rewrites": [
+    "formatBytes, relativeTime 테스트를 test/format-more.test.ts로 추가해 주세요. 경계값과 출력 형식 위주로요. src는 수정하지 마세요.",
+    "format.ts 테스트 보강해줘: test/format-more.test.ts, formatBytes/relativeTime 경계 케이스. 소스 수정 금지."
+  ],
+  "labels": {
+    "hard_constraints": {
+      "data_sensitivity": "external_ok",
+      "irreversible_side_effects": false,
+      "required_capabilities": [
+        "tool_use"
+      ],
+      "latency": "interactive",
+      "budget_cap_usd": null
+    },
+    "dimensions": {
+      "difficulty": 1,
+      "ambiguity": 0,
+      "scope": 0,
+      "verifiability": 0,
+      "consistency": 0,
+      "capabilities": {
+        "long_context": 0,
+        "multi_step_tools": 1,
+        "code_correctness": 2,
+        "instruction_following": 1,
+        "korean_writing": 0,
+        "reasoning": 1
+      }
+    }
+  },
+  "verification": {
+    "type": "mutation",
+    "test_command": "node --test test/format-more.test.ts",
+    "test_globs": [
+      "test/format-more.test.ts"
+    ],
+    "mutants": [
+      "mutants/m1",
+      "mutants/m2",
+      "mutants/m3",
+      "mutants/m4"
+    ],
+    "timeout_s": 120
+  },
+  "expected_tier_hypothesis": "local",
+  "expected_thinking_hypothesis": "off"
+}

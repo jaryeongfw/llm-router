@@ -1,0 +1,51 @@
+{
+  "budget": {
+    "max_turns": 40,
+    "timeout_s": 900
+  },
+  "id": "sql-modify-exclude-cancelled",
+  "fixture": "sales-reports",
+  "task_type": {
+    "domain": "data",
+    "action": "code_modify"
+  },
+  "summary": "상위 고객 쿼리에서 취소 주문 제외",
+  "prompt": "queries/top_customers.sql이 취소 주문까지 포함해서 집계하고 있어요. 취소된 주문은 빼 주세요.",
+  "rewrites": [
+    "top_customers.sql에서 CANCELLED 주문을 제외하도록 수정해 주세요.",
+    "상위 고객 쿼리에 취소 주문 빼줘."
+  ],
+  "labels": {
+    "hard_constraints": {
+      "data_sensitivity": "external_ok",
+      "irreversible_side_effects": false,
+      "required_capabilities": [
+        "tool_use"
+      ],
+      "latency": "interactive",
+      "budget_cap_usd": null
+    },
+    "dimensions": {
+      "difficulty": 1,
+      "ambiguity": 0,
+      "scope": 0,
+      "verifiability": 0,
+      "consistency": 0,
+      "capabilities": {
+        "long_context": 0,
+        "multi_step_tools": 1,
+        "code_correctness": 1,
+        "instruction_following": 1,
+        "korean_writing": 0,
+        "reasoning": 0
+      }
+    }
+  },
+  "verification": {
+    "type": "command",
+    "command": "npm test",
+    "timeout_s": 120
+  },
+  "expected_tier_hypothesis": "local",
+  "expected_thinking_hypothesis": "off"
+}

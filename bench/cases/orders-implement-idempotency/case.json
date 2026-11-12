@@ -1,0 +1,51 @@
+{
+  "budget": {
+    "max_turns": 40,
+    "timeout_s": 900
+  },
+  "id": "orders-implement-idempotency",
+  "fixture": "orders-service",
+  "task_type": {
+    "domain": "backend",
+    "action": "implement"
+  },
+  "summary": "placeOrder 멱등 키",
+  "prompt": "클라이언트 재시도로 주문이 중복 생성되는 문제가 있어서 placeOrder에 멱등 키를 지원하고 싶어요. `placeOrder(input, options?: { idempotencyKey?: string })`로 바꾸고, 같은 키로 같은 내용을 다시 보내면 기존 주문을 그대로 돌려주고(재고 재예약 없음), 같은 키로 다른 내용을 보내면 `IdempotencyConflictError`를 던져 주세요. 오류 클래스는 errors.ts에 추가하고 index.ts에서 export해 주세요. 실패한 요청은 키를 소비하지 않아야 합니다.",
+  "rewrites": [
+    "placeOrder에 선택 옵션 idempotencyKey를 추가해 주세요. 동일 키+동일 요청 → 기존 주문 반환(재예약 없음), 동일 키+다른 요청 → IdempotencyConflictError(errors.ts에 정의, index에서 export). 실패한 요청은 키를 남기지 않습니다.",
+    "주문 중복 생성 방지용 멱등 키 구현해줘. 시그니처는 placeOrder(input, { idempotencyKey }). 같은 키 다른 내용이면 IdempotencyConflictError. 실패 시 키 미소비."
+  ],
+  "labels": {
+    "hard_constraints": {
+      "data_sensitivity": "external_ok",
+      "irreversible_side_effects": false,
+      "required_capabilities": [
+        "tool_use"
+      ],
+      "latency": "interactive",
+      "budget_cap_usd": null
+    },
+    "dimensions": {
+      "difficulty": 3,
+      "ambiguity": 1,
+      "scope": 1,
+      "verifiability": 0,
+      "consistency": 0,
+      "capabilities": {
+        "long_context": 1,
+        "multi_step_tools": 2,
+        "code_correctness": 2,
+        "instruction_following": 2,
+        "korean_writing": 0,
+        "reasoning": 3
+      }
+    }
+  },
+  "verification": {
+    "type": "command",
+    "command": "npm test",
+    "timeout_s": 120
+  },
+  "expected_tier_hypothesis": "heavy",
+  "expected_thinking_hypothesis": "xhigh"
+}

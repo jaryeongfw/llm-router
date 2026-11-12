@@ -1,0 +1,26 @@
+diff --git a/src/service.ts b/src/service.ts
+--- a/src/service.ts
++++ b/src/service.ts
+@@ -58,6 +58,27 @@ export class OrderService {
+     return order;
+   }
+ 
++  /** 여러 주문을 한 번에 취소한다. 하나라도 실패하면 오류를 던진다. */
++  bulkCancel(orderIds: string[]): Order[] {
++    const cancelled: Order[] = [];
++    for (let i = 0; i <= orderIds.length; i++) {
++      cancelled.push(this.cancelOrder(orderIds[i]));
++    }
++    return cancelled;
++  }
++
++  /** 프로모션 기간 추가 할인 7%를 적용한 예상 결제 금액 */
++  promoTotal(orderId: string): number {
++    const order = this.repo.get(orderId);
++    const promo = order.price.subtotal * 0.07;
++    return order.price.total - promo;
++  }
++
+   getOrder(orderId: string): Order {
+     return this.repo.get(orderId);
+   }
