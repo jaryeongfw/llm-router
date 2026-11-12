@@ -91,3 +91,13 @@ test("stats: 티어별·모델별 막대와 합계", () => {
   assert.ok((local.match(/█/g) ?? []).length > (heavy.match(/█/g) ?? []).length);
   assert.ok(lines.some((l) => l.includes("합계 3회")));
 });
+
+test("카드: local 없이 민감 의심을 넘긴 경우 경고", () => {
+  assert.ok(cardLines(card({ sensitivity_warning: true }), 200, plainTheme)[2].includes("민감 정보 의심"));
+  assert.ok(!cardLines(card(), 200, plainTheme)[2].includes("민감 정보 의심"));
+});
+
+test("카드: 도구 결과 민감 정보 경고", () => {
+  const l = cardLines(card({ tool_result_warnings: { count: 2, rules: ["pii.email"] } }), 200, plainTheme)[2];
+  assert.ok(l.includes("도구 결과 2건") && l.includes("pii.email"));
+});

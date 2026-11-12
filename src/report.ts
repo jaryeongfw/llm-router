@@ -37,6 +37,10 @@ export interface QueryCard {
   stage2: string;
   capped: boolean;
   ask_user: boolean;
+  /** 판단 모델이 민감 정보를 의심했지만 local 모델이 없어 외부 모델로 진행함 (이전 카드에는 없음) */
+  sensitivity_warning?: boolean;
+  /** 도구 결과에서 민감 정보 규칙이 걸려 외부 모델로 보낸 건수와 규칙 id (값은 없음) */
+  tool_result_warnings?: { count: number; rules: string[] };
   /** 이 쿼리에서 새로 결정하지 않고 이전 결정을 유지했는지 (pin_scope: session 등) */
   pinned: boolean;
   aborted: boolean;
@@ -140,7 +144,9 @@ export function cardLines(card: QueryCard, width: number, t: ThemeLike, expanded
   else notes.push(`판단 모델 없음 (${card.stage2})`);
   if (card.adjustments.length) notes.push(`보정 ${card.adjustments.join(", ")}`);
   if (card.capped) notes.push(t.fg("warning", "필요 티어보다 낮게 제한됨"));
+  if (card.tool_result_warnings?.count) notes.push(t.fg("warning", `도구 결과 ${card.tool_result_warnings.count}건에 민감 정보 규칙(${card.tool_result_warnings.rules.join(", ")}) → 외부 모델로 전송`));
   if (card.ask_user) notes.push(t.fg("warning", "요청이 모호함"));
+  if (card.sensitivity_warning) notes.push(t.fg("warning", "판단 모델이 민감 정보 의심 (local 모델 없음 → 외부 모델로 진행)"));
   if (card.aborted) notes.push(t.fg("warning", "중단됨"));
   lines.push(t.fg("dim", `  ${notes.join(" · ")}`));
   // 결정과 다른 모델이 응답했으면 (재시도 중 전환 등) 항상 보여 준다

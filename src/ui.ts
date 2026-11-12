@@ -29,6 +29,7 @@ export interface UiHost {
 export interface RouterHandle {
   last: Map<string, DecisionRecord>;
   takePending(sessionId: string): DecisionRecord | undefined;
+  takeToolWarnings?(sessionId: string): { tool: string; rules: string[] }[];
   pinScope: "query" | "session";
 }
 
@@ -42,13 +43,15 @@ export function currentQueryAssistants(branch: readonly Entry[]): AssistantLike[
   return branch.slice(i + 1).filter((e) => e.type === "message" && e.message?.role === "assistant").map((e) => e.message!);
 }
 
-export function buildCard(rec: DecisionRecord, pinned: boolean, aborted: boolean, assistants: AssistantLike[]): QueryCard {
+export function buildCard(rec: DecisionRecord, pinned: boolean, aborted: boolean, assistants: AssistantLike[], toolWarnings: { tool: string; rules: string[] }[] = []): QueryCard {
   const d = rec.decision;
   return {
     v: 1, card_id: `${rec.state.decision_ref}${pinned ? `-p${Date.now().toString(36)}` : ""}`, query_id: rec.state.query_id, tier: d.tier, model: d.model, thinking: d.thinking, operating_point: d.operating_point,
     cell: d.table_cell, adjustments: d.adjustments, thinking_adjustments: d.thinking_adjustments,
     analyzer: rec.analyzer, analyzer_ms: rec.latency_ms.stage2, stage2: rec.stage2,
-    capped: d.capped, ask_user: d.ask_user, pinned, aborted, usage: summarize(assistants),
+    capped: d.capped, ask_user: d.ask_user, ...(rec.suspicion_ignored === "no_local" ? { sensitivity_warning: true } : {}),
+    ...(toolWarnings.length ? { tool_result_warnings: { count: toolWarnings.length, rules: [...new Set(toolWarnings.flatMap((w) => w.rules))] } } : {}),
+    pinned, aborted, usage: summarize(assistants),
   };
 }
 
@@ -66,13 +69,14 @@ export function registerUi(pi: UiHost, router: RouterHandle) {
   pi.on("agent_settled", (e, ctx) => {
     const sid = ctx.sessionManager.getSessionId();
     const pending = router.takePending(sid);
+    const toolWarnings = router.takeToolWarnings?.(sid) ?? [];
     if (ctx.model?.provider !== "router" && !pending) return;
     // 새 결정이 없으면: 세션 고정 중일 때만 "이전 결정 유지" 카드. 그 밖(예: 라우터가 차단)은 카드 없음
     const rec = pending ?? (router.pinScope === "session" ? router.last.get(sid) : undefined);
     if (!rec) return;
     const assistants = currentQueryAssistants(ctx.sessionManager.getBranch());
     if (!assistants.length) return;
-    const card = buildCard(rec, !pending, e.aborted === true, assistants);
+    const card = buildCard(rec, !pending, e.aborted === true, assistants, toolWarnings);
     pi.appendEntry(CARD_TYPE, card);
     // appendEntry가 바로 기록에 반영되지 않는 경우에도 상태줄에 이번 카드가 들어가게 한다
     refreshStatus(ctx, cardsOf(ctx.sessionManager.getBranch()).some((c) => c.card_id === card.card_id) ? [] : [card]);
