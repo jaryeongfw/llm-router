@@ -34,3 +34,24 @@ test("2단 실패 시 차원은 null, 신뢰도 0", () => {
   assert.equal(m.analysis.dimensions.difficulty, null);
   assert.equal(m.analysis.confidence, 0);
 });
+
+test("local 모델이 없으면 2단 의심만으로 막지 않고 표시만 한다 (기본 warn)", () => {
+  const m = mergeStages(s1(), s2(true), { localAvailable: false });
+  assert.equal(m.analysis.hard_constraints.data_sensitivity, "external_ok");
+  assert.equal(m.suspicionIgnored, "no_local");
+});
+
+test("suspicion_without_local: block이면 local이 없어도 로컬 전용으로 올린다", () => {
+  const m = mergeStages(s1(), s2(true), { localAvailable: false, suspicionWithoutLocal: "block" });
+  assert.equal(m.analysis.hard_constraints.data_sensitivity, "internal_only");
+});
+
+test("1단이 로컬 전용으로 판정한 것은 local 유무와 상관없이 유지", () => {
+  const m = mergeStages(s1({ data_sensitivity: "internal_only" }), s2(true), { localAvailable: false });
+  assert.equal(m.analysis.hard_constraints.data_sensitivity, "internal_only");
+});
+
+test("예상 컨텍스트 크기를 결정 입력에 넘긴다", () => {
+  assert.equal(mergeStages(s1(), s2(false), { estContextTokens: 1234 }).analysis.context_signals?.est_context_tokens, 1234);
+  assert.equal(mergeStages(s1(), s2(false)).analysis.context_signals, undefined);
+});
