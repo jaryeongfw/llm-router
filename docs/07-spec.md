@@ -42,10 +42,14 @@ scripts/
   check-rules.ts            민감도 규칙의 정답 세트 정확도 검사
   derive-hypotheses.ts      케이스 예상 (티어, 추론 강도)를 현재 조회표로 재계산
   eval-routing.ts           라우팅 판단 평가 (2단 실제 호출 또는 저장 결과 다시 채점)
+  e2e-secret-guard.ts       비밀 값 가림 종단 간 검증 (실제 pi 실행, 공급자 요청 본문 검사)
 src/
   stage1.ts                 1단 규칙 엔진, 비밀정보 가림 (§5.2)
   stage2.ts                 2단 분석기 프롬프트·파싱·대체 모델 (§5.3)
   analyze.ts                1·2단 병합 (§5.1)
+  secrets.ts                복원 가능한 비밀 값 가림 (§6.5)
+  secret-guard.ts           pi 훅: context 가림, tool_call 복원, 지침 (§6.5)
+  index.ts                  pi 확장 진입점
   decide.ts                 결정 규칙 v0 (§6), 순수 함수
   (index.ts 등)             플러그인 런타임 (§7, 다음 단계)
 test/                       stage1, stage2, analyze, decide 단위 테스트 (node:test)
@@ -92,7 +96,7 @@ test/                       stage1, stage2, analyze, decide 단위 테스트 (no
  ② 2단 분석 (목표 < 3s). 분석기는 1단 민감도 판정으로 고른다
  │   - external_ok   → anthropic/claude-haiku-5-5 (thinking off), 실패 시 ixi-simflow
  │   - internal_only → ixi-simflow, 실패 시 gemma-e4b → gemma-e2b (사내 모델만)
- │   - 비밀정보는 [[MASKED 규칙id]]로 가린 텍스트를 보낸다 (사내 게이트웨이는 비밀정보 요청을 403으로 거부한다)
+ │   - 비밀정보는 [[MASKED 이름]]으로 가린 텍스트를 보낸다 (사내 게이트웨이는 비밀정보 요청을 403으로 거부한다)
  │   - 출력: 태스크 유형(도메인, 행위), 차원 점수, 난이도 분석 문장, 신뢰도
  │   - 2단이 민감 의심을 내면 민감으로 올린다(OR 결합). 단, 비밀정보를 이미 가린 요청이면 반영하지 않는다(src/analyze.ts)
  │
@@ -146,7 +150,7 @@ test/                       stage1, stage2, analyze, decide 단위 테스트 (no
    - internal_only → 후보 = {data_policy == internal}
    - required_capabilities ⊄ 티어 능력 → 제외
    - 예상 컨텍스트 > 티어 컨텍스트 × 0.8 → 제외
-   - secret_present → 후보 = {config.secret_policy.tier} (§6.5)
+   - secret_present: mode=heavy면 후보 = {secret_policy.tier}, mode=block이면 결정 실패, mode=mask(기본)면 영향 없음 (§6.5)
 3. 기본 티어 = table[(action, band)] (없으면 table[("*", band)], 난이도를 모르면 config.default_tier)
 4. 보정 (순서대로, 각각 최대 한 단계)
    a. irreversible_side_effects → 기본 티어를 최소 config.side_effect_floor(기본 heavy)로
@@ -192,14 +196,35 @@ test/                       stage1, stage2, analyze, decide 단위 테스트 (no
 
 ### 6.5 비밀정보 정책
 
-- 사내 게이트웨이(ixi-simflow)는 비밀정보 형식이 든 요청을 403으로 거부한다. lgu-axeng는 현재 차단되어 있다. 그래서 비밀정보 태스크는 사내 티어로 처리할 수 없다(08 §3.2).
-- 사용자 결정(2026-11-12): **heavy(opus-5-5)로 시도하고, 실패하면 차단한다.** opus-5-5는 가짜 키가 든 요청을 정상 처리했다(3.0초).
-- 동작:
-  - `secret_present`이면 후보를 `config.secret_policy.tier`(기본 heavy)로 제한한다. 난이도와 무관하다.
-  - 2단 분석기에는 가린 텍스트를 보낸다. 실행 모델(opus)에는 원문을 보낸다.
-  - 실행이 실패하거나 거부되면(`on_failure: block`) 사용자에게 비밀정보를 지우고 다시 요청하라고 알린다. 다른 티어로 대체하지 않는다.
-  - 비밀정보와 사내 전용 데이터(개인정보 등)가 함께 있으면 후보가 없다. 결정 실패로 처리하고 같은 안내를 한다.
-- 이 정책은 비밀정보가 외부 벤더(Anthropic)로 전송됨을 뜻한다. 원문 비밀정보를 외부로 보내지 않아야 하는 환경이면 `secret_policy`를 바꿔야 한다. 이 경우 기본값은 차단이다(§13 S9).
+사내 게이트웨이(ixi-simflow)는 비밀정보 형식이 든 요청을 403으로 거부한다(08 §3.2). 이것을 회사의 통제 의도로 보고, **비밀 값을 어떤 모델에도 보내지 않는다**(2026-11-12 결정, 08 §7).
+
+**구현** (`src/secrets.ts`, `src/secret-guard.ts`, `src/index.ts`)
+
+| pi 이벤트 | 동작 |
+|---|---|
+| `context` | 모델 호출 직전마다 메시지 사본의 비밀 값을 `[[MASKED n 이름]]`으로 바꾼다. 대상은 사용자 메시지, 도구 결과, 어시스턴트 텍스트, 도구 호출 인자다. 세션 파일의 원본은 그대로 둔다 |
+| `tool_call` | 도구 인자의 자리표시를 실제 값으로 되돌린 뒤 실행한다. 모르는 번호면 실행을 막는다 |
+| `before_agent_start` | 자리표시를 도구 인자에 그대로 쓰면 된다는 지침을 넣는다. 이 지침이 없으면 모델이 작업을 멈췄다 |
+
+- 원래 값과 자리표시의 대응은 세션별 메모리에만 둔다. 같은 값은 같은 번호를 받는다(프롬프트 캐시 유지).
+- 가림 범위:
+  - 규칙에 이름 있는 그룹 `v`/`w`가 있으면 값만 가린다. 비밀번호 대입, 접속 문자열의 비밀번호가 해당된다.
+  - 개인 키는 블록 전체를 가린다.
+- 바꾸지 않는 것: thinking 블록(서명), 서명된 어시스턴트 텍스트, 이미지, 시스템 프롬프트(§13 S12).
+- 2단 분석기 입력도 가린다(번호 없는 `[[MASKED 이름]]`, 복원 불필요).
+- 할 수 없는 작업: 모델이 값의 내용을 직접 봐야 하는 작업. 예: 토큰 디코딩.
+
+**결정 규칙의 동작** (`config.secret_policy.mode`)
+
+| mode | 동작 |
+|---|---|
+| `mask` (기본) | 티어에 영향 없음. 위 가림으로 처리 |
+| `heavy` | `secret_policy.tier`만 후보. 원문을 그 모델에 보낸다고 가정한다. 가림 훅을 끈 환경용 |
+| `block` | 결정하지 않고 사용자에게 비밀정보를 지우라고 알린다 |
+
+**검증** (`node scripts/e2e-secret-guard.ts`, 08 §7)
+- haiku-5-5와 ixi-simflow 모두 `.env` 읽기, 값을 써야 하는 명령 실행, 파일 수정에서 공급자 요청 본문에 비밀 값이 0회 들어갔다.
+- 가림 없는 대조군에서는 유출이 검출됐다.
 
 ## 7. 런타임 (pi virtual model)
 
@@ -277,7 +302,7 @@ test/                       stage1, stage2, analyze, decide 단위 테스트 (no
     "internal_only": { "model": "simflow/ixi-simflow-codeadvisor", "fallbacks": ["lgu-axeng/axengdev/google/gemma-4-e4b", "lgu-axeng/axengdev/google/gemma-4-e2b"] },
     "timeout_ms": 3000, "mask_secrets": true
   },
-  "secret_policy": { "tier": "heavy", "on_failure": "block" },
+  "secret_policy": { "mode": "mask", "tier": "heavy" },
   "verifiable_down": { "max_difficulty": 0, "confident_max_difficulty": 0, "min_confidence": 1 },
   "virtual_levels": { "low": "economy", "medium": "balanced", "high": "quality" },
   "operating_points": {
@@ -386,6 +411,8 @@ pi --mode json --no-session -ne -ns -np -nc --no-mcp \
 | S6 | 태스크 안에서 추론 강도를 바꿀지(같은 모델 유지). 네 외부 모델 모두 `supportsMidConvoEffort`를 지원한다. 캐시 영향은 실측으로 확인한다 | 시드 벤치마크 후 |
 | S7 | lgu-axeng 차단(503) 지속 여부. 차단이 계속되면 local 티어의 대체 모델과 gemma 분석기도 쓸 수 없다 | 네트워크 확인 후 |
 | S8 | ~~ixi-simflow 분석 지연~~ → 측정함: 동시 1에서 p50 6.9초. external_ok 요청은 haiku-5-5로 분석하도록 바꿈(08 §6). internal_only 요청의 지연은 남은 문제 | 해결(부분) |
-| S9 | 비밀정보 원문을 외부 벤더로 보내도 되는가 (§6.5). 사내 보안 정책 확인 필요 | 운영 전 |
+| S9 | ~~비밀정보 원문을 외부 벤더로 보내도 되는가~~ → 보내지 않는다. 모든 호출에서 가림(§6.5) | 해결 |
+| S12 | 시스템 프롬프트(AGENTS.md 등)의 비밀 값은 가리지 않는다. `context_with_system`으로 확장할지 | 런타임 구현 시 |
+| S13 | 가림 규칙이 못 잡는 비밀 형식(사내 고유 토큰 등)은 그대로 나간다. 사용자 정의 패턴(config) 추가 | 운영 전 |
 | S10 | 사내 모델 호출 시 403·503은 재시도하지 않기. pi의 에이전트 수준 재시도(기본 3회)가 실패를 30초로 늘렸다. 플러그인은 `ctx.modelRegistry`로 직접 호출하므로 재시도 동작을 따로 확인한다 | 런타임 구현 시 |
 | S11 | 난이도 구간 경계(1↔2) 혼동이 여전히 결정 차이의 주원인(구간 불일치 20%) | 결과 기준 평가 후 |

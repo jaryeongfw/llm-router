@@ -26,7 +26,7 @@
 |---|---|
 | `config/` | 티어 구성(roster), 분류 체계, 민감도 규칙, 조회표 v0, 플러그인 기본 설정 |
 | `spec/schemas/` | 데이터 계약 (JSON Schema) |
-| `src/` | `stage1.ts`(1단 규칙, 비밀정보 가림), `stage2.ts`(2단 분석기 프롬프트·파싱), `analyze.ts`(1·2단 병합), `decide.ts`(결정 규칙) |
+| `src/` | `stage1.ts`(1단 규칙), `stage2.ts`(2단 분석기), `analyze.ts`(1·2단 병합), `decide.ts`(결정 규칙), `secrets.ts`·`secret-guard.ts`(모든 모델 호출의 비밀 값 가림·복원), `index.ts`(pi 확장 진입점) |
 | `bench/fixtures/` | 합성 저장소 4개: orders-service, ui-utils, sales-reports, ops-scripts |
 | `bench/cases/` | 실행형 시드 케이스 30건 (setup / hidden / solution / mutants) |
 | `bench/analyzer/gold.jsonl` | 분석기 정답 세트 44건 (민감 값은 템플릿) |
@@ -48,6 +48,8 @@ npm run check         # 위 세 가지 전부
 npm run derive        # 조회표 변경 후 케이스 예상 (티어, 추론 강도) 재계산
 node scripts/eval-routing.ts --analyzer policy   # 라우팅 판단 평가 (2단 분석기 실제 호출)
 node scripts/eval-routing.ts --rescore bench/results/raw/<파일>   # 모델 재호출 없이 현재 규칙으로 다시 채점
+npm run e2e:secrets   # 비밀 값 가림 종단 간 검증 (실제 pi 실행, 가짜 비밀 값)
+pi -e ./src/index.ts  # 확장 불러오기 (현재: 비밀 값 가림)
 ```
 
 ## 상태
