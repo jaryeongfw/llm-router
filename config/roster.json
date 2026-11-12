@@ -1,5 +1,5 @@
 {
-  "version": 2,
+  "version": 3,
   "source_note": "단가는 pi-coding-agent 1.5.2 카탈로그(USD/MTok). 추론 강도는 카탈로그 thinkingLevelMap 기준(null = 미지원). 사내 모델은 종량 과금 없음. 실제 비용은 usage로 다시 계산한다.",
   "tiers": [
     {
@@ -210,6 +210,44 @@
   ],
   "analyzers": [
     {
+      "ref": "anthropic/claude-haiku-5-5",
+      "role": "primary",
+      "data_policy": "external_vendor",
+      "price": {
+        "input": 0.1,
+        "output": 0.5,
+        "cache_read": 0.01,
+        "cache_write": 0.125
+      },
+      "context_window": 1000000,
+      "max_output": 128000,
+      "capabilities": [
+        "tool_use",
+        "image_input",
+        "long_context_200k",
+        "long_context_1m",
+        "structured_output",
+        "reasoning"
+      ],
+      "thinking_levels": [
+        "off",
+        "low",
+        "medium",
+        "high",
+        "xhigh",
+        "max"
+      ],
+      "default_thinking": "low",
+      "price_above": {
+        "above_input_tokens": 100000,
+        "input": 0.5,
+        "output": 2.5,
+        "cache_read": 0.05,
+        "cache_write": 0.625
+      },
+      "note": "external_ok 요청의 2단 분석기 (thinking off)"
+    },
+    {
       "ref": "simflow/ixi-simflow-codeadvisor",
       "role": "primary",
       "data_policy": "internal",
@@ -224,7 +262,7 @@
         "off"
       ],
       "default_thinking": "off",
-      "note": "2단 분석기 기본 (local 티어와 겸용)"
+      "note": "internal_only 요청의 2단 분석기, external_ok 대체"
     },
     {
       "ref": "lgu-axeng/axengdev/google/gemma-4-e4b",

@@ -10,12 +10,31 @@
   "low_confidence": 0.5,
   "decision_timeout_ms": 4000,
   "analyzer": {
-    "model": "simflow/ixi-simflow-codeadvisor",
-    "fallbacks": [
-      "lgu-axeng/axengdev/google/gemma-4-e4b",
-      "lgu-axeng/axengdev/google/gemma-4-e2b"
-    ],
-    "timeout_ms": 3000
+    "external_ok": {
+      "model": "anthropic/claude-haiku-5-5",
+      "fallbacks": [
+        "simflow/ixi-simflow-codeadvisor"
+      ],
+      "thinking": "off"
+    },
+    "internal_only": {
+      "model": "simflow/ixi-simflow-codeadvisor",
+      "fallbacks": [
+        "lgu-axeng/axengdev/google/gemma-4-e4b",
+        "lgu-axeng/axengdev/google/gemma-4-e2b"
+      ]
+    },
+    "timeout_ms": 3000,
+    "mask_secrets": true
+  },
+  "secret_policy": {
+    "tier": "heavy",
+    "on_failure": "block"
+  },
+  "verifiable_down": {
+    "max_difficulty": 0,
+    "confident_max_difficulty": 0,
+    "min_confidence": 1
   },
   "virtual_levels": {
     "low": "economy",

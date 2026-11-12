@@ -1,6 +1,6 @@
 {
-  "version": 1,
-  "note": "전부 prior(가설). (티어, 추론 강도) 쌍. n ≥ 30인 칸만 measured로 교체한다.",
+  "version": 2,
+  "note": "전부 prior(가설). 키는 (행위, 난이도 구간). 구간 안의 세부 난이도는 추론 강도에만 반영(구간 상단이면 +1). n ≥ 30인 칸만 measured로 교체한다.",
   "tiers_order": [
     "local",
     "light",
@@ -11,7 +11,7 @@
   "cells": [
     {
       "action": "explain",
-      "difficulty": 0,
+      "band": "easy",
       "tier": "local",
       "thinking": "off",
       "basis": "prior",
@@ -21,17 +21,7 @@
     },
     {
       "action": "explain",
-      "difficulty": 1,
-      "tier": "light",
-      "thinking": "low",
-      "basis": "prior",
-      "n": 0,
-      "success_rate": null,
-      "rationale": "답변 텍스트만 생성. 쉬운 설명은 사내 모델로 충분하다는 가설"
-    },
-    {
-      "action": "explain",
-      "difficulty": 2,
+      "band": "hard",
       "tier": "standard",
       "thinking": "low",
       "basis": "prior",
@@ -40,58 +30,28 @@
       "rationale": "답변 텍스트만 생성. 쉬운 설명은 사내 모델로 충분하다는 가설"
     },
     {
-      "action": "explain",
-      "difficulty": 3,
-      "tier": "standard",
-      "thinking": "high",
-      "basis": "prior",
-      "n": 0,
-      "success_rate": null,
-      "rationale": "답변 텍스트만 생성. 쉬운 설명은 사내 모델로 충분하다는 가설"
-    },
-    {
       "action": "code_modify",
-      "difficulty": 0,
-      "tier": "local",
-      "thinking": "off",
-      "basis": "prior",
-      "n": 0,
-      "success_rate": null,
-      "rationale": "명세가 명확하면 쉬운 편"
-    },
-    {
-      "action": "code_modify",
-      "difficulty": 1,
+      "band": "easy",
       "tier": "light",
       "thinking": "low",
       "basis": "prior",
       "n": 0,
       "success_rate": null,
-      "rationale": "명세가 명확하면 쉬운 편"
+      "rationale": "가설값. 시드 벤치마크로 대체"
     },
     {
       "action": "code_modify",
-      "difficulty": 2,
+      "band": "hard",
       "tier": "standard",
       "thinking": "medium",
       "basis": "prior",
       "n": 0,
       "success_rate": null,
-      "rationale": "명세가 명확하면 쉬운 편"
-    },
-    {
-      "action": "code_modify",
-      "difficulty": 3,
-      "tier": "heavy",
-      "thinking": "medium",
-      "basis": "prior",
-      "n": 0,
-      "success_rate": null,
-      "rationale": "명세가 명확하면 쉬운 편"
+      "rationale": "가설값. 시드 벤치마크로 대체"
     },
     {
       "action": "implement",
-      "difficulty": 0,
+      "band": "easy",
       "tier": "light",
       "thinking": "low",
       "basis": "prior",
@@ -101,77 +61,37 @@
     },
     {
       "action": "implement",
-      "difficulty": 1,
+      "band": "hard",
       "tier": "standard",
-      "thinking": "low",
-      "basis": "prior",
-      "n": 0,
-      "success_rate": null,
-      "rationale": "가설값. 시드 벤치마크로 대체"
-    },
-    {
-      "action": "implement",
-      "difficulty": 2,
-      "tier": "standard",
-      "thinking": "high",
-      "basis": "prior",
-      "n": 0,
-      "success_rate": null,
-      "rationale": "가설값. 시드 벤치마크로 대체"
-    },
-    {
-      "action": "implement",
-      "difficulty": 3,
-      "tier": "heavy",
-      "thinking": "high",
-      "basis": "prior",
-      "n": 0,
-      "success_rate": null,
-      "rationale": "가설값. 시드 벤치마크로 대체"
-    },
-    {
-      "action": "debug",
-      "difficulty": 0,
-      "tier": "light",
-      "thinking": "low",
-      "basis": "prior",
-      "n": 0,
-      "success_rate": null,
-      "rationale": "원인 탐색에 추론이 필요해 같은 티어에서도 추론 강도를 올린다"
-    },
-    {
-      "action": "debug",
-      "difficulty": 1,
-      "tier": "light",
       "thinking": "medium",
       "basis": "prior",
       "n": 0,
       "success_rate": null,
-      "rationale": "원인 탐색에 추론이 필요해 같은 티어에서도 추론 강도를 올린다"
+      "rationale": "가설값. 시드 벤치마크로 대체"
     },
     {
       "action": "debug",
-      "difficulty": 2,
+      "band": "easy",
+      "tier": "light",
+      "thinking": "low",
+      "basis": "prior",
+      "n": 0,
+      "success_rate": null,
+      "rationale": "원인 탐색에 추론이 필요해 어려운 구간은 추론 강도를 높게"
+    },
+    {
+      "action": "debug",
+      "band": "hard",
       "tier": "standard",
       "thinking": "high",
       "basis": "prior",
       "n": 0,
       "success_rate": null,
-      "rationale": "원인 탐색에 추론이 필요해 같은 티어에서도 추론 강도를 올린다"
-    },
-    {
-      "action": "debug",
-      "difficulty": 3,
-      "tier": "heavy",
-      "thinking": "high",
-      "basis": "prior",
-      "n": 0,
-      "success_rate": null,
-      "rationale": "원인 탐색에 추론이 필요해 같은 티어에서도 추론 강도를 올린다"
+      "rationale": "원인 탐색에 추론이 필요해 어려운 구간은 추론 강도를 높게"
     },
     {
       "action": "refactor",
-      "difficulty": 0,
+      "band": "easy",
       "tier": "light",
       "thinking": "low",
       "basis": "prior",
@@ -181,17 +101,7 @@
     },
     {
       "action": "refactor",
-      "difficulty": 1,
-      "tier": "standard",
-      "thinking": "low",
-      "basis": "prior",
-      "n": 0,
-      "success_rate": null,
-      "rationale": "가설값. 시드 벤치마크로 대체"
-    },
-    {
-      "action": "refactor",
-      "difficulty": 2,
+      "band": "hard",
       "tier": "standard",
       "thinking": "medium",
       "basis": "prior",
@@ -200,28 +110,8 @@
       "rationale": "가설값. 시드 벤치마크로 대체"
     },
     {
-      "action": "refactor",
-      "difficulty": 3,
-      "tier": "heavy",
-      "thinking": "high",
-      "basis": "prior",
-      "n": 0,
-      "success_rate": null,
-      "rationale": "가설값. 시드 벤치마크로 대체"
-    },
-    {
       "action": "test_write",
-      "difficulty": 0,
-      "tier": "local",
-      "thinking": "off",
-      "basis": "prior",
-      "n": 0,
-      "success_rate": null,
-      "rationale": "돌연변이 검증으로 결과 확인이 쉬움"
-    },
-    {
-      "action": "test_write",
-      "difficulty": 1,
+      "band": "easy",
       "tier": "light",
       "thinking": "low",
       "basis": "prior",
@@ -231,7 +121,7 @@
     },
     {
       "action": "test_write",
-      "difficulty": 2,
+      "band": "hard",
       "tier": "standard",
       "thinking": "low",
       "basis": "prior",
@@ -240,28 +130,8 @@
       "rationale": "돌연변이 검증으로 결과 확인이 쉬움"
     },
     {
-      "action": "test_write",
-      "difficulty": 3,
-      "tier": "standard",
-      "thinking": "high",
-      "basis": "prior",
-      "n": 0,
-      "success_rate": null,
-      "rationale": "돌연변이 검증으로 결과 확인이 쉬움"
-    },
-    {
       "action": "review",
-      "difficulty": 0,
-      "tier": "light",
-      "thinking": "medium",
-      "basis": "prior",
-      "n": 0,
-      "success_rate": null,
-      "rationale": "검증 가능성이 낮고 놓친 결함이 늦게 드러난다"
-    },
-    {
-      "action": "review",
-      "difficulty": 1,
+      "band": "easy",
       "tier": "standard",
       "thinking": "medium",
       "basis": "prior",
@@ -271,7 +141,7 @@
     },
     {
       "action": "review",
-      "difficulty": 2,
+      "band": "hard",
       "tier": "heavy",
       "thinking": "medium",
       "basis": "prior",
@@ -280,30 +150,10 @@
       "rationale": "검증 가능성이 낮고 놓친 결함이 늦게 드러난다"
     },
     {
-      "action": "review",
-      "difficulty": 3,
-      "tier": "heavy",
-      "thinking": "high",
-      "basis": "prior",
-      "n": 0,
-      "success_rate": null,
-      "rationale": "검증 가능성이 낮고 놓친 결함이 늦게 드러난다"
-    },
-    {
       "action": "design",
-      "difficulty": 0,
-      "tier": "light",
-      "thinking": "medium",
-      "basis": "prior",
-      "n": 0,
-      "success_rate": null,
-      "rationale": "검증 불가에 가깝고 트레이드오프 추론이 핵심"
-    },
-    {
-      "action": "design",
-      "difficulty": 1,
+      "band": "easy",
       "tier": "standard",
-      "thinking": "high",
+      "thinking": "medium",
       "basis": "prior",
       "n": 0,
       "success_rate": null,
@@ -311,19 +161,9 @@
     },
     {
       "action": "design",
-      "difficulty": 2,
+      "band": "hard",
       "tier": "heavy",
       "thinking": "high",
-      "basis": "prior",
-      "n": 0,
-      "success_rate": null,
-      "rationale": "검증 불가에 가깝고 트레이드오프 추론이 핵심"
-    },
-    {
-      "action": "design",
-      "difficulty": 3,
-      "tier": "heavy",
-      "thinking": "xhigh",
       "basis": "prior",
       "n": 0,
       "success_rate": null,
@@ -331,17 +171,7 @@
     },
     {
       "action": "docs_write",
-      "difficulty": 0,
-      "tier": "local",
-      "thinking": "off",
-      "basis": "prior",
-      "n": 0,
-      "success_rate": null,
-      "rationale": "한국어 작문은 경량 모델도 충분하다는 가설"
-    },
-    {
-      "action": "docs_write",
-      "difficulty": 1,
+      "band": "easy",
       "tier": "light",
       "thinking": "low",
       "basis": "prior",
@@ -351,7 +181,7 @@
     },
     {
       "action": "docs_write",
-      "difficulty": 2,
+      "band": "hard",
       "tier": "standard",
       "thinking": "low",
       "basis": "prior",
@@ -360,58 +190,28 @@
       "rationale": "한국어 작문은 경량 모델도 충분하다는 가설"
     },
     {
-      "action": "docs_write",
-      "difficulty": 3,
-      "tier": "standard",
-      "thinking": "medium",
-      "basis": "prior",
-      "n": 0,
-      "success_rate": null,
-      "rationale": "한국어 작문은 경량 모델도 충분하다는 가설"
-    },
-    {
       "action": "data_transform",
-      "difficulty": 0,
+      "band": "easy",
       "tier": "light",
       "thinking": "low",
       "basis": "prior",
       "n": 0,
       "success_rate": null,
-      "rationale": "결과 비교로 검증 가능. 어려운 집계는 추론 강도가 중요"
+      "rationale": "가설값. 시드 벤치마크로 대체"
     },
     {
       "action": "data_transform",
-      "difficulty": 1,
-      "tier": "light",
+      "band": "hard",
+      "tier": "standard",
       "thinking": "medium",
       "basis": "prior",
       "n": 0,
       "success_rate": null,
-      "rationale": "결과 비교로 검증 가능. 어려운 집계는 추론 강도가 중요"
-    },
-    {
-      "action": "data_transform",
-      "difficulty": 2,
-      "tier": "standard",
-      "thinking": "high",
-      "basis": "prior",
-      "n": 0,
-      "success_rate": null,
-      "rationale": "결과 비교로 검증 가능. 어려운 집계는 추론 강도가 중요"
-    },
-    {
-      "action": "data_transform",
-      "difficulty": 3,
-      "tier": "heavy",
-      "thinking": "high",
-      "basis": "prior",
-      "n": 0,
-      "success_rate": null,
-      "rationale": "결과 비교로 검증 가능. 어려운 집계는 추론 강도가 중요"
+      "rationale": "가설값. 시드 벤치마크로 대체"
     },
     {
       "action": "*",
-      "difficulty": 0,
+      "band": "easy",
       "tier": "light",
       "thinking": "low",
       "basis": "prior",
@@ -421,29 +221,9 @@
     },
     {
       "action": "*",
-      "difficulty": 1,
+      "band": "hard",
       "tier": "standard",
-      "thinking": "low",
-      "basis": "prior",
-      "n": 0,
-      "success_rate": null,
-      "rationale": "가설값. 시드 벤치마크로 대체"
-    },
-    {
-      "action": "*",
-      "difficulty": 2,
-      "tier": "standard",
-      "thinking": "high",
-      "basis": "prior",
-      "n": 0,
-      "success_rate": null,
-      "rationale": "가설값. 시드 벤치마크로 대체"
-    },
-    {
-      "action": "*",
-      "difficulty": 3,
-      "tier": "heavy",
-      "thinking": "high",
+      "thinking": "medium",
       "basis": "prior",
       "n": 0,
       "success_rate": null,

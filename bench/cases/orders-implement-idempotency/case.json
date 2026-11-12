@@ -46,6 +46,6 @@
     "command": "npm test",
     "timeout_s": 120
   },
-  "expected_tier_hypothesis": "heavy",
+  "expected_tier_hypothesis": "standard",
   "expected_thinking_hypothesis": "xhigh"
 }

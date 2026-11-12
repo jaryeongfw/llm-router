@@ -54,10 +54,10 @@ if (JSON.stringify(byRank) !== JSON.stringify(table.tiers_order)) errors.push(`r
 const allRefs = roster.tiers.flatMap((t: { models: { ref: string }[] }) => t.models.map((m) => m.ref));
 unique("roster 티어 모델", allRefs);
 
-// 조회표: 모든 (행위 ∪ *) × 난이도 0~3이 정확히 한 칸
+// 조회표: 모든 (행위 ∪ *) × 구간(easy, hard)이 정확히 한 칸
 const cellKeys = new Map<string, number>();
 for (const c of table.cells) {
-  const key = `${c.action}/${c.difficulty}`;
+  const key = `${c.action}/${c.band}`;
   cellKeys.set(key, (cellKeys.get(key) ?? 0) + 1);
   if (!tierIds.includes(c.tier)) errors.push(`routing-table ${key}: 없는 티어 ${c.tier}`);
   if (c.action !== "*" && !actionIds.has(c.action)) errors.push(`routing-table ${key}: 없는 행위`);
@@ -74,12 +74,12 @@ for (const t of roster.tiers as { id: string; models: RModel[] }[]) {
 }
 for (const c of table.cells) {
   const p = tierPrimary.get(c.tier);
-  if (p && !p.thinking_levels.includes(c.thinking)) errors.push(`routing-table ${c.action}/${c.difficulty}: ${c.tier}(${p.ref})는 추론 강도 ${c.thinking} 미지원`);
+  if (p && !p.thinking_levels.includes(c.thinking)) errors.push(`routing-table ${c.action}/${c.band}: ${c.tier}(${p.ref})는 추론 강도 ${c.thinking} 미지원`);
 }
 
-for (const a of [...actionIds, "*"]) for (let d = 0; d <= 3; d++) {
-  const n = cellKeys.get(`${a}/${d}`) ?? 0;
-  if (n !== 1) errors.push(`routing-table: ${a}/${d} 칸이 ${n}개`);
+for (const a of [...actionIds, "*"]) for (const b of ["easy", "hard"]) {
+  const n = cellKeys.get(`${a}/${b}`) ?? 0;
+  if (n !== 1) errors.push(`routing-table: ${a}/${b} 칸이 ${n}개`);
 }
 if (!tierIds.includes(table.default_tier)) errors.push(`routing-table.default_tier 없는 티어 ${table.default_tier}`);
 
@@ -87,12 +87,20 @@ if (!tierIds.includes(table.default_tier)) errors.push(`routing-table.default_ti
 for (const k of ["default_tier", "direct_tier", "side_effect_floor"]) {
   if (!tierIds.includes(pluginConfig[k])) errors.push(`plugin-config.${k}: 없는 티어 ${pluginConfig[k]}`);
 }
-const analyzerRefs = roster.analyzers.map((m: { ref: string }) => m.ref);
-for (const k of ["model", "fallback"]) {
-  const ref = pluginConfig.analyzer[k];
-  if (ref && !analyzerRefs.includes(ref)) errors.push(`plugin-config.analyzer.${k}: roster.analyzers에 없음 ${ref}`);
+const analyzerByRef = new Map<string, { data_policy: string }>(roster.analyzers.map((m: { ref: string; data_policy: string }) => [m.ref, m]));
+for (const route of ["external_ok", "internal_only"]) {
+  const r = pluginConfig.analyzer[route];
+  for (const ref of [r.model, ...r.fallbacks]) {
+    const m = analyzerByRef.get(ref);
+    if (!m) errors.push(`plugin-config.analyzer.${route}: roster.analyzers에 없음 ${ref}`);
+    // 사내 전용 요청은 사내 분석기만 (07-spec §5.1)
+    else if (route === "internal_only" && m.data_policy !== "internal") errors.push(`plugin-config.analyzer.internal_only: 외부 모델 ${ref}`);
+  }
 }
-for (const m of roster.analyzers) if (m.data_policy !== "internal") errors.push(`roster.analyzers ${m.ref}: 분석기는 internal이어야 함 (07-spec §5.1)`);
+if (!tierIds.includes(pluginConfig.secret_policy.tier)) errors.push(`plugin-config.secret_policy.tier: 없는 티어 ${pluginConfig.secret_policy.tier}`);
+if (roster.tiers.find((t: { id: string }) => t.id === pluginConfig.secret_policy.tier)?.models.some((m: { data_policy: string }) => m.data_policy === "internal")) {
+  warnings.push("secret_policy 티어에 사내 모델이 있음: 사내 게이트웨이는 비밀정보 요청을 거부한다 (08 §3.2)");
+}
 if (!roster.tiers.some((t: { models: { data_policy: string }[] }) => t.models.every((m) => m.data_policy === "internal"))) {
   errors.push("roster: internal 전용 티어가 없음 (민감 태스크를 처리할 수 없음)");
 }

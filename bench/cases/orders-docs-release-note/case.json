@@ -66,5 +66,5 @@
     "timeout_s": 120
   },
   "expected_tier_hypothesis": "light",
-  "expected_thinking_hypothesis": "low"
+  "expected_thinking_hypothesis": "medium"
 }

@@ -20,7 +20,14 @@ export interface RosterModel {
 export interface Tier { id: string; rank: number; models: RosterModel[] }
 export interface Roster { tiers: Tier[] }
 
-export interface Cell { action: string; difficulty: number; tier: string; thinking: Thinking }
+export type Band = "easy" | "hard";
+export interface Cell { action: string; band: Band; tier: string; thinking: Thinking }
+
+/** 조회표는 거친 구간을 키로 쓴다 (08-routing-eval §4 A1). 분석기 난이도 오차는 거의 항상 ±1 이내다. */
+export function bandOf(difficulty: number): Band {
+  return difficulty <= 1 ? "easy" : "hard";
+}
+const BAND_TOP: Record<Band, number> = { easy: 1, hard: 3 };
 export interface RoutingTable { tiers_order: string[]; default_tier: string; cells: Cell[] }
 
 export interface DecideConfig {
@@ -29,6 +36,8 @@ export interface DecideConfig {
   low_confidence: number;
   operating_points: Record<OperatingPoint, { thinking_shift: number; allow_verifiable_down: boolean; tier_shift?: number }>;
   thinking_rules: { reasoning_up_at: number; max_thinking: Thinking };
+  secret_policy: { tier: string; on_failure: "block" };
+  verifiable_down: { max_difficulty: number; confident_max_difficulty: number; min_confidence: number };
 }
 
 export interface AnalysisInput {
@@ -37,6 +46,7 @@ export interface AnalysisInput {
     data_sensitivity: "external_ok" | "internal_only";
     irreversible_side_effects: boolean;
     required_capabilities: string[];
+    secret_present?: boolean;
   };
   dimensions: {
     difficulty: Level; ambiguity: Level; scope: Level; verifiability: Level;
@@ -46,8 +56,8 @@ export interface AnalysisInput {
   confidence: number;
 }
 
-export type TierAdjustment = "side_effect_floor" | "scope_up" | "low_confidence_up" | "verifiable_down" | "capability_filter" | "context_filter" | "sensitivity_filter";
-export type ThinkingAdjustment = "reasoning_up" | "operating_point_shift" | "clamped_to_model" | "local_off";
+export type TierAdjustment = "secret_policy" | "side_effect_floor" | "scope_up" | "low_confidence_up" | "verifiable_down" | "capability_filter" | "context_filter" | "sensitivity_filter";
+export type ThinkingAdjustment = "difficulty_up" | "reasoning_up" | "operating_point_shift" | "clamped_to_model" | "local_off";
 
 export interface Decision {
   tier: string;
@@ -91,8 +101,9 @@ function primary(tier: Tier, available?: (ref: string) => boolean): { model: Ros
 
 export function lookupCell(table: RoutingTable, action: string | null, difficulty: Level): Cell | null {
   if (difficulty === null) return null;
-  return table.cells.find((c) => c.action === action && c.difficulty === difficulty)
-    ?? table.cells.find((c) => c.action === "*" && c.difficulty === difficulty)
+  const band = bandOf(difficulty);
+  return table.cells.find((c) => c.action === action && c.band === band)
+    ?? table.cells.find((c) => c.action === "*" && c.band === band)
     ?? null;
 }
 
@@ -117,6 +128,13 @@ export function decide(
     candidates = candidates.filter((t) => t.models.every((m) => m.data_policy === "internal"));
     adjustments.push("sensitivity_filter");
     reasons.push("민감 데이터 → 사내 티어만");
+  }
+  // 비밀정보: 사내 게이트웨이가 거부하므로 secret_policy 티어(기본 heavy)만. 실패하면 호출자가 차단한다.
+  const secret = a.hard_constraints.secret_present === true;
+  if (secret) {
+    candidates = candidates.filter((t) => t.id === cfg.secret_policy.tier);
+    adjustments.push("secret_policy");
+    reasons.push(`비밀정보 포함 → ${cfg.secret_policy.tier}만 시도`);
   }
   const caps = a.hard_constraints.required_capabilities;
   if (caps.length) {
@@ -155,7 +173,10 @@ export function decide(
     target += 1;
     adjustments.push("low_confidence_up");
   }
-  if (opCfg.allow_verifiable_down && d.verifiability === 0 && d.difficulty !== null && d.difficulty <= 1
+  const vd = cfg.verifiable_down;
+  const easyEnough = d.difficulty !== null
+    && (d.difficulty <= vd.max_difficulty || (a.confidence >= vd.min_confidence && d.difficulty <= vd.confident_max_difficulty));
+  if (opCfg.allow_verifiable_down && d.verifiability === 0 && easyEnough
       && !adjustments.includes("side_effect_floor") && target > 0) {
     target -= 1;
     adjustments.push("verifiable_down");
@@ -172,13 +193,21 @@ export function decide(
   }
   if (!chosen) {
     // 후보가 하나도 없음: 제약 위반으로 대체하지 않는다. 사내 티어가 없으면 호출자가 사용자에게 알린다.
-    throw new Error(before === 0 ? "사용 가능한 티어가 없습니다" : "필수 제약을 만족하는 티어가 없습니다");
+    if (before === 0) throw new Error("사용 가능한 티어가 없습니다");
+    if (secret && a.hard_constraints.data_sensitivity === "internal_only") {
+      throw new Error("비밀정보와 사내 전용 데이터가 함께 있어 배정할 티어가 없습니다. 비밀정보를 지우고 다시 요청하세요");
+    }
+    throw new Error("필수 제약을 만족하는 티어가 없습니다");
   }
   const pick = primary(chosen, available)!;
 
   // 5. 추론 강도
   const thinkingAdj: ThinkingAdjustment[] = [];
   let thinking = baseThinking;
+  if (cell && d.difficulty === BAND_TOP[cell.band]) {
+    thinking = shiftThinking(thinking, 1);
+    thinkingAdj.push("difficulty_up");
+  }
   if ((d.capabilities.reasoning ?? 0) >= cfg.thinking_rules.reasoning_up_at) {
     thinking = shiftThinking(thinking, 1);
     thinkingAdj.push("reasoning_up");
@@ -204,7 +233,7 @@ export function decide(
     thinking,
     base_tier: baseTier,
     base_thinking: baseThinking,
-    table_cell: cell ? `${cell.action}/${cell.difficulty}` : null,
+    table_cell: cell ? `${cell.action}/${cell.band}` : null,
     operating_point: op,
     adjustments,
     thinking_adjustments: thinkingAdj,

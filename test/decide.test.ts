@@ -2,64 +2,79 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
-import { clampThinking, decide, type AnalysisInput, type DecideConfig, type Roster, type RoutingTable } from "../src/decide.ts";
+import { bandOf, clampThinking, decide, type AnalysisInput, type DecideConfig, type Roster, type RoutingTable } from "../src/decide.ts";
 
 const rd = (p: string) => JSON.parse(readFileSync(join(import.meta.dirname, "..", p), "utf8"));
 const roster = rd("config/roster.json") as Roster;
 const table = rd("config/routing-table.v0.json") as RoutingTable;
 const cfg = rd("config/llm-router.default.json") as DecideConfig;
 
-function analysis(over: Partial<AnalysisInput["dimensions"]> & { action?: string | null; sensitive?: boolean; sideEffect?: boolean; caps?: string[]; confidence?: number; est?: number } = {}): AnalysisInput {
-  const { action = "debug", sensitive = false, sideEffect = false, caps = [], confidence = 1, est, ...dims } = over;
+type Opts = Partial<AnalysisInput["dimensions"]> & { action?: string | null; sensitive?: boolean; secret?: boolean; sideEffect?: boolean; caps?: string[]; confidence?: number; est?: number };
+function analysis(over: Opts = {}): AnalysisInput {
+  const { action = "debug", sensitive = false, secret = false, sideEffect = false, caps = [], confidence = 1, est, ...dims } = over;
   return {
     task_type: { domain: "backend", action },
-    hard_constraints: { data_sensitivity: sensitive ? "internal_only" : "external_ok", irreversible_side_effects: sideEffect, required_capabilities: caps },
+    hard_constraints: { data_sensitivity: sensitive ? "internal_only" : "external_ok", irreversible_side_effects: sideEffect, required_capabilities: caps, secret_present: secret },
     dimensions: { difficulty: 2, ambiguity: 0, scope: 1, verifiability: 2, capabilities: { reasoning: 1 }, ...dims },
     context_signals: { est_context_tokens: est ?? null },
     confidence,
   };
 }
+const run = (o: Opts = {}, op: "economy" | "balanced" | "quality" = "balanced") => decide(analysis(o), roster, table, cfg, op);
 
-test("조회표 그대로: debug/2 → standard:high", () => {
-  const d = decide(analysis(), roster, table, cfg);
-  assert.deepEqual([d.tier, d.thinking, d.model], ["standard", "high", "anthropic/claude-sonnet-5-5"]);
-  assert.equal(d.table_cell, "debug/2");
+test("구간: 0~1은 easy, 2~3은 hard", () => {
+  assert.deepEqual([0, 1, 2, 3].map(bandOf), ["easy", "easy", "hard", "hard"]);
+});
+
+test("조회표 그대로: debug/hard(난이도 2) → standard:high", () => {
+  const d = run();
+  assert.deepEqual([d.tier, d.thinking, d.model, d.table_cell], ["standard", "high", "anthropic/claude-sonnet-5-5", "debug/hard"]);
+});
+
+test("구간 상단(난이도 3)은 같은 티어에서 추론 강도 +1", () => {
+  const d = run({ difficulty: 3 });
+  assert.deepEqual([d.tier, d.thinking], ["standard", "xhigh"]);
+  assert.ok(d.thinking_adjustments.includes("difficulty_up"));
+});
+
+test("난이도 ±1 오차가 구간 안이면 티어가 바뀌지 않는다", () => {
+  assert.equal(run({ difficulty: 2 }).tier, run({ difficulty: 3 }).tier);
+  assert.equal(run({ difficulty: 0 }).tier, run({ difficulty: 1 }).tier);
 });
 
 test("추론 요구가 높으면 추론 강도 +1", () => {
-  const d = decide(analysis({ capabilities: { reasoning: 3 } }), roster, table, cfg);
+  const d = run({ capabilities: { reasoning: 3 } });
   assert.equal(d.thinking, "xhigh");
   assert.ok(d.thinking_adjustments.includes("reasoning_up"));
 });
 
 test("운영점: economy는 −1, quality는 +1", () => {
-  assert.equal(decide(analysis(), roster, table, cfg, "economy").thinking, "medium");
-  assert.equal(decide(analysis(), roster, table, cfg, "quality").thinking, "xhigh");
+  assert.equal(run({}, "economy").thinking, "medium");
+  assert.equal(run({}, "quality").thinking, "xhigh");
 });
 
 test("max_thinking 상한", () => {
-  const d = decide(analysis({ action: "design", difficulty: 3, capabilities: { reasoning: 3 } }), roster, table, cfg, "quality");
-  assert.equal(d.thinking, "xhigh");
+  assert.equal(run({ action: "design", difficulty: 3, capabilities: { reasoning: 3 } }, "quality").thinking, "xhigh");
 });
 
-test("검증 가능하고 쉬우면 한 단계 아래 티어", () => {
-  const d = decide(analysis({ difficulty: 1, verifiability: 0 }), roster, table, cfg);
-  assert.equal(d.base_tier, "light");
-  assert.equal(d.tier, "local");
-  assert.equal(d.thinking, "off");
+test("verifiable_down: 난이도 0이면 적용", () => {
+  const d = run({ difficulty: 0, verifiability: 0, confidence: 0.8 });
+  assert.deepEqual([d.base_tier, d.tier, d.thinking], ["light", "local", "off"]);
   assert.ok(d.thinking_adjustments.includes("local_off"));
 });
 
+test("verifiable_down: 난이도 1은 신뢰도와 무관하게 적용하지 않음 (08 §6)", () => {
+  assert.equal(run({ difficulty: 1, verifiability: 0, confidence: 0.99 }).tier, "light");
+  assert.equal(run({ difficulty: 1, verifiability: 0, confidence: 0.85 }).tier, "light");
+});
+
 test("quality 운영점에서는 verifiable_down을 하지 않음", () => {
-  const d = decide(analysis({ difficulty: 1, verifiability: 0 }), roster, table, cfg, "quality");
-  assert.equal(d.tier, "light");
+  assert.equal(run({ difficulty: 0, verifiability: 0 }, "quality").tier, "light");
 });
 
 test("민감 데이터는 사내 티어로 제한되고 capped 표시", () => {
-  const d = decide(analysis({ sensitive: true, difficulty: 3 }), roster, table, cfg);
-  assert.equal(d.tier, "local");
-  assert.equal(d.model, "simflow/ixi-simflow-codeadvisor");
-  assert.equal(d.capped, true);
+  const d = run({ sensitive: true, difficulty: 3 });
+  assert.deepEqual([d.tier, d.model, d.capped], ["local", "simflow/ixi-simflow-codeadvisor", true]);
 });
 
 test("사내 기본 모델을 쓸 수 없으면 티어 내 대체 모델", () => {
@@ -68,33 +83,43 @@ test("사내 기본 모델을 쓸 수 없으면 티어 내 대체 모델", () =>
   assert.ok(d.fallback_reason);
 });
 
+test("비밀정보는 난이도와 무관하게 heavy(opus)", () => {
+  for (const difficulty of [0, 2]) {
+    const d = run({ secret: true, difficulty, verifiability: 0 });
+    assert.deepEqual([d.tier, d.model], ["heavy", "anthropic/claude-opus-5-5"]);
+    assert.ok(d.adjustments.includes("secret_policy"));
+  }
+});
+
+test("비밀정보 + 사내 전용 데이터는 배정 불가 (차단)", () => {
+  assert.throws(() => run({ secret: true, sensitive: true }), /비밀정보/);
+});
+
 test("비가역 부작용은 하한 티어(heavy)", () => {
-  const d = decide(analysis({ action: "code_modify", difficulty: 0, verifiability: 0, sideEffect: true }), roster, table, cfg);
+  const d = run({ action: "code_modify", difficulty: 0, verifiability: 0, sideEffect: true });
   assert.equal(d.tier, "heavy");
   assert.ok(!d.adjustments.includes("verifiable_down"));
 });
 
 test("이미지 입력이 필요하면 사내 티어 제외", () => {
-  const d = decide(analysis({ action: "explain", difficulty: 0, caps: ["image_input"] }), roster, table, cfg);
-  assert.equal(d.tier, "light");
+  assert.equal(run({ action: "explain", difficulty: 0, caps: ["image_input"] }).tier, "light");
 });
 
 test("민감 + 이미지 입력이면 후보가 없어 예외 (외부로 대체하지 않음)", () => {
-  assert.throws(() => decide(analysis({ sensitive: true, caps: ["image_input"] }), roster, table, cfg));
+  assert.throws(() => run({ sensitive: true, caps: ["image_input"] }));
 });
 
 test("신뢰도가 낮으면 한 단계 위", () => {
-  const d = decide(analysis({ confidence: 0.3 }), roster, table, cfg);
-  assert.equal(d.tier, "heavy");
+  assert.equal(run({ confidence: 0.3 }).tier, "heavy");
 });
 
 test("난이도 미상이면 기본 티어(heavy)와 그 기본 추론 강도", () => {
-  const d = decide(analysis({ difficulty: null }), roster, table, cfg);
+  const d = run({ difficulty: null });
   assert.deepEqual([d.tier, d.thinking, d.table_cell], ["heavy", "medium", null]);
 });
 
 test("모호성 3이면 되묻기 표시", () => {
-  assert.equal(decide(analysis({ ambiguity: 3 }), roster, table, cfg).ask_user, true);
+  assert.equal(run({ ambiguity: 3 }).ask_user, true);
 });
 
 test("지원하지 않는 추론 강도는 가까운 값으로", () => {
