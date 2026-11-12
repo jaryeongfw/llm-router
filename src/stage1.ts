@@ -16,7 +16,7 @@ export interface RuleDef {
   validator?: "luhn" | "kr_rrn_shape";
   config_key?: string;
   threshold_tokens?: number;
-  effect: { data_sensitivity?: "external_ok" | "internal_only"; irreversible_side_effects?: boolean; add_capability?: Capability };
+  effect: { data_sensitivity?: "external_ok" | "internal_only"; irreversible_side_effects?: boolean; add_capability?: Capability; secret_present?: boolean };
 }
 
 export interface RulesFile { version: number; rules: RuleDef[] }
@@ -36,6 +36,8 @@ export interface HardConstraints {
   required_capabilities: Capability[];
   latency: "interactive" | "background";
   budget_cap_usd: number | null;
+  /** 비밀정보 형식 문자열 포함. 사내 게이트웨이가 거부하므로 secret_policy를 따른다 (07-spec §6.5). */
+  secret_present: boolean;
 }
 
 export interface Stage1Result {
@@ -118,19 +120,24 @@ function hit(rule: Compiled, input: Stage1Input): boolean {
 }
 
 function defaults(): HardConstraints {
-  return { data_sensitivity: "external_ok", irreversible_side_effects: false, required_capabilities: [], latency: "interactive", budget_cap_usd: null };
+  return { data_sensitivity: "external_ok", irreversible_side_effects: false, required_capabilities: [], latency: "interactive", budget_cap_usd: null, secret_present: false };
 }
 
 export function runStage1(rules: Compiled[], input: Stage1Input): Stage1Result {
   const hc = defaults();
   const rule_hits: string[] = [];
   const groups = new Set<RuleGroup>();
-  for (const rule of rules) {
-    if (!hit(rule, input)) continue;
+  // secret 규칙을 먼저 원문에 적용하고, 나머지 규칙은 비밀 값을 가린 텍스트에 적용한다.
+  // 예: 접속 문자열 user:pw@host가 이메일(pii)로 다시 잡혀 "비밀정보 + 사내 전용"으로 잘못 차단되는 것을 막는다.
+  const masked = { ...input, text: maskSecrets(rules, input.text).text };
+  const ordered = [...rules.filter((r) => r.group === "secret"), ...rules.filter((r) => r.group !== "secret")];
+  for (const rule of ordered) {
+    if (!hit(rule, rule.group === "secret" ? input : masked)) continue;
     rule_hits.push(rule.id);
     groups.add(rule.group);
     if (rule.effect.data_sensitivity === "internal_only") hc.data_sensitivity = "internal_only";
     if (rule.effect.irreversible_side_effects) hc.irreversible_side_effects = true;
+    if (rule.effect.secret_present) hc.secret_present = true;
     const cap = rule.effect.add_capability;
     if (cap && !hc.required_capabilities.includes(cap)) hc.required_capabilities.push(cap);
   }
@@ -144,4 +151,22 @@ export function runStage1Safe(rules: Compiled[], input: Stage1Input): Stage1Resu
   } catch {
     return { hard_constraints: { ...defaults(), data_sensitivity: "internal_only" }, rule_hits: [], groups: [], failsafe: true };
   }
+}
+
+/**
+ * secret 그룹 규칙에 걸린 구간을 `[[MASKED 규칙id]]`로 바꾼다. 분석기에는 이 텍스트를 보낸다.
+ * 분석(유형·난이도 판정)에는 비밀 값이 필요 없고, 사내 게이트웨이는 비밀정보가 든 요청을 거부한다.
+ */
+export function maskSecrets(rules: Compiled[], text: string): { text: string; masked: number } {
+  let out = text;
+  let masked = 0;
+  for (const rule of rules) {
+    if (rule.group !== "secret" || !rule.re) continue;
+    const re = new RegExp(rule.re.source, rule.re.flags);
+    out = out.replace(re, () => {
+      masked++;
+      return `[[MASKED ${rule.id}]]`;
+    });
+  }
+  return { text: out, masked };
 }

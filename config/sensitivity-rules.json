@@ -1,13 +1,13 @@
 {
   "version": 1,
-  "note": "1단 규칙. 재현율 우선. 매치된 값은 어디에도 기록하지 않고 규칙 id만 남긴다.",
+  "note": "1단 규칙. 재현율 우선. 매치된 값은 어디에도 기록하지 않고 규칙 id만 남긴다. secret은 사내 게이트웨이가 거부하므로 internal_only가 아니라 secret_present로 표시하고 secret_policy를 따른다.",
   "rules": [
     {
       "id": "secret.private_key",
       "group": "secret",
       "kind": "regex",
       "effect": {
-        "data_sensitivity": "internal_only"
+        "secret_present": true
       },
       "pattern": "-----BEGIN (?:RSA |EC |OPENSSH |DSA |)PRIVATE KEY-----"
     },
@@ -16,7 +16,7 @@
       "group": "secret",
       "kind": "regex",
       "effect": {
-        "data_sensitivity": "internal_only"
+        "secret_present": true
       },
       "pattern": "\\b(?:AKIA|ASIA)[0-9A-Z]{16}\\b"
     },
@@ -25,7 +25,7 @@
       "group": "secret",
       "kind": "regex",
       "effect": {
-        "data_sensitivity": "internal_only"
+        "secret_present": true
       },
       "pattern": "\\bsk-(?:ant-|proj-)?[A-Za-z0-9_-]{20,}\\b"
     },
@@ -34,7 +34,7 @@
       "group": "secret",
       "kind": "regex",
       "effect": {
-        "data_sensitivity": "internal_only"
+        "secret_present": true
       },
       "pattern": "\\bgh[pousr]_[A-Za-z0-9]{30,}\\b"
     },
@@ -43,7 +43,7 @@
       "group": "secret",
       "kind": "regex",
       "effect": {
-        "data_sensitivity": "internal_only"
+        "secret_present": true
       },
       "pattern": "\\beyJ[A-Za-z0-9_-]{8,}\\.eyJ[A-Za-z0-9_-]{8,}\\.[A-Za-z0-9_-]{8,}\\b"
     },
@@ -52,17 +52,18 @@
       "group": "secret",
       "kind": "regex",
       "effect": {
-        "data_sensitivity": "internal_only"
+        "secret_present": true
       },
-      "pattern": "(?:password|passwd|pwd|비밀번호|secret|api[_-]?key|token)\\s*[:=]\\s*['\"]?[^\\s'\"]{6,}",
-      "flags": "i"
+      "pattern": "(?:password|passwd|pwd|비밀번호|secret|api[_-]?key|token)[\"']?\\s*[:=]\\s*(?:([\"'])[^\"'\\s]{6,}\\1|(?=[^\\s\"'(),;]*\\d)(?=[^\\s\"'(),;]*[A-Za-z])[^\\s\"'(),;]{8,}(?![\\w(]))",
+      "flags": "i",
+      "note": "값이 따옴표 리터럴이거나, 영문·숫자가 섞인 8자 이상 값일 때만. `secret: true`, `token = getToken()`, `process.env.X` 같은 코드 식별자는 제외 (08 §6.5)"
     },
     {
       "id": "secret.conn_string",
       "group": "secret",
       "kind": "regex",
       "effect": {
-        "data_sensitivity": "internal_only"
+        "secret_present": true
       },
       "pattern": "\\b[a-z][a-z0-9+]*://[^\\s:/@]+:[^\\s@/]+@[^\\s/]+",
       "flags": "i",
