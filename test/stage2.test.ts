@@ -33,13 +33,15 @@ test("action null 허용", () => {
   assert.equal(parseStage2(good.replace('"action":"debug"', '"action":null'), tax).task_type.action, null);
 });
 
-test("기본 모델이 실패하면 대체 모델, 형식 오류는 대체하지 않음", async () => {
+test("기본 모델이 실패하거나 형식 오류면 대체 모델", async () => {
   const fail = async () => { throw new Error("403"); };
   const ok = async () => good;
   const r1 = await runStage2("x", tax, [{ ref: "a", complete: fail }, { ref: "b", complete: ok }], 1000);
   assert.deepEqual([r1.status, r1.model], ["ok", "b"]);
   const r2 = await runStage2("x", tax, [{ ref: "a", complete: async () => "모르겠음" }, { ref: "b", complete: ok }], 1000);
-  assert.deepEqual([r2.status, r2.model], ["parse_error", "a"]);
+  assert.deepEqual([r2.status, r2.model], ["ok", "b"]);
+  const r2b = await runStage2("x", tax, [{ ref: "a", complete: async () => "모르겠음" }], 1000);
+  assert.deepEqual([r2b.status, r2b.model], ["parse_error", "a"]);
   const r3 = await runStage2("x", tax, [{ ref: "a", complete: fail }], 1000);
   assert.equal(r3.status, "unavailable");
 });

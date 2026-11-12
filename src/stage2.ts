@@ -130,7 +130,10 @@ export function parseStage2(text: string, tax: Taxonomy): Stage2Output {
   };
 }
 
-/** 기본 모델 → 대체 모델 순서로 시도한다. 각 시도에 시간 상한을 둔다. */
+/**
+ * 기본 모델 → 대체 모델 순서로 시도한다. 각 시도에 시간 상한을 둔다.
+ * 형식 오류도 다음 모델로 넘긴다 (같은 모델 재시도는 하지 않는다). 모두 실패하면 마지막 실패를 돌려준다.
+ */
 export async function runStage2(
   request: string,
   tax: Taxonomy,
@@ -149,8 +152,7 @@ export async function runStage2(
       try {
         return { status: "ok", output: parseStage2(text, tax), latency_ms: Date.now() - started, model: m.ref };
       } catch (e) {
-        // 형식 오류는 대체 모델로 넘어가지 않는다: 같은 요청을 다시 보내도 지연만 늘어난다
-        return { status: "parse_error", output: null, error: (e as Error).message, latency_ms: Date.now() - started, model: m.ref };
+        last = { status: "parse_error", output: null, error: (e as Error).message, latency_ms: Date.now() - started, model: m.ref };
       }
     } catch (e) {
       last = { status: ac.signal.aborted ? "timeout" : "unavailable", output: null, error: (e as Error).message, latency_ms: Date.now() - started, model: m.ref };
