@@ -99,7 +99,7 @@ test/                       stage1, stage2, analyze, decide 단위 테스트 (no
  ① 1단 규칙 (결정적, 외부 호출 없음, 목표 < 20ms)
  │   - 민감도: 비밀정보 / 개인정보 / 내부 표식 / 사용자 명시
  │   - 부작용: 배포·마이그레이션·원격 쓰기·삭제 표현
- │   - 필요 능력: 이미지 첨부, 예상 컨텍스트 크기
+ │   - 필요 능력: 이미지 첨부, 예상 컨텍스트 크기 (대화 전체를 문자 수로 추정: src/runtime.ts estimateTokens)
  │   - 컨텍스트 신호: 쿼리의 경로·심볼로 rg 검색 → 매치 파일 수, 대상 파일 크기
  │
  ② 2단 분석 (목표 < 3s). 분석기는 1단 민감도 판정으로 고른다
@@ -108,6 +108,8 @@ test/                       stage1, stage2, analyze, decide 단위 테스트 (no
  │   - 비밀정보는 [[MASKED 이름]]으로 가린 텍스트를 보낸다 (로컬 모델 서버가 비밀정보 요청을 거부할 수 있다)
  │   - 출력: 태스크 유형(도메인, 행위), 차원 점수, 난이도 분석 문장, 신뢰도
  │   - 2단이 민감 의심을 내면 민감으로 올린다(OR 결합). 단, 비밀정보를 이미 가린 요청이면 반영하지 않는다(src/analyze.ts)
+ │   - local 모델이 없으면 2단 의심만으로는 막지 않고 쿼리 카드에 경고한다(analyzer.suspicion_without_local: "warn").
+ │     외부 판단 모델이 의심을 냈다면 요청은 이미 외부로 나갔고, 막아도 보호 효과 없이 작업만 멈추기 때문이다. "block"이면 이전처럼 차단한다
  │
  ③ 분석 결과 = analysis (schema: analysis)
 ```
@@ -133,7 +135,11 @@ test/                       stage1, stage2, analyze, decide 단위 테스트 (no
 | `capability` | 이미지 첨부, 컨텍스트 추정 > 100K | `required_capabilities`에 추가 |
 
 - secret 규칙을 먼저 원문에 적용한다. 나머지 규칙은 **비밀 값을 가린 텍스트**에 적용한다. 접속 문자열 `user:pw@host`가 이메일 규칙에 다시 걸려 잘못 차단되는 것을 막기 위해서다.
-- 규칙은 **재현율 우선**이다. 오탐(괜히 로컬로 가는 것)은 비용·품질 손실이고, 미탐은 유출이기 때문이다.
+- 규칙은 **재현율 우선**이다. 오탐(괜히 로컬로 가는 것)은 비용·품질 손실이고, 미탐은 유출이기 때문이다. 다만 local 모델이 없으면 오탐은 차단이므로, 분명한 오탐 유형은 매치 단위 예외로 뺀다.
+  - `word_boundary`: 영문 키워드는 식별자 안(`isConfidential`, `PII_FIELD`)에서 매치하지 않는다.
+  - `unless_followed_by`: 데이터 종류를 가리키는 말(`internal_marker.data_terms`: 개인정보·고객 정보·PII 등) 뒤에 "마스킹 함수", "탐지 정규식", "보호법" 같은 기능·주제어가 오면 제외한다. "개인정보 마스킹해 줘: …"처럼 처리를 요청하는 말은 그대로 잡는다. "대외비" 같은 표식에는 예외가 없다. 붙여 넣은 실제 값은 `pii` 규칙이 따로 잡는다.
+  - `side_effect` 규칙은 부정 표현("git push는 하지 말고", "do not git push")을 제외한다. 다른 실행 요청은 따로 잡는다("push는 하지 말고 운영 배포해 줘" → deploy).
+  - 차단 메시지에는 걸린 규칙 이름(값 아님)을 붙여 사용자가 표현을 고칠 수 있게 한다.
 - 목표: 정답 세트 기준 `secret`·`pii` 재현율 1.0, 민감도 정밀도 ≥ 0.8.
 
 ### 5.3 2단 출력 계약
@@ -239,6 +245,18 @@ test/                       stage1, stage2, analyze, decide 단위 테스트 (no
 - Claude haiku와 local 모델 모두 `.env` 읽기, 값을 써야 하는 명령 실행, 파일 수정에서 공급자 요청 본문에 비밀 값이 0회 들어갔다.
 - 가림 없는 대조군에서는 유출이 검출됐다.
 
+### 6.6 도구 결과의 개인정보·기밀 표식 (정책: 경고)
+
+쿼리 텍스트는 1단 규칙이 검사하지만, 같은 쿼리의 도구 루프에서 읽은 파일·명령 출력에 개인정보가 섞여 들어올 수 있다. 이 경우 요청은 이미 진행 중이고 대화 기록 전체가 외부 모델로 나간다.
+- 정책은 **경고**다(`tool_result_policy: "warn"`, 기본). 막거나 값을 가리지 않는다. 코드 예시의 이메일처럼 오탐이 흔하고, 가리면 작업이 깨지기 때문이다. `"off"`면 검사하지 않는다.
+- `route()`가 요청마다 새 도구 결과(`role: toolResult`의 텍스트)에 `pii`·`internal_marker` 규칙을 적용한다. 비밀 값은 §6.5 훅이 맡으므로 보지 않는다.
+- 라우팅된 모델이 `local_models`가 아닐 때만 `ctx.ui.notify`로 경고한다. 로컬 모델로 갈 때는 경고를 미루고, 나중에 외부 모델로 바뀌면 그때 경고한다(기록이 함께 나가므로).
+- 같은 도구 결과(`toolCallId`)는 한 번만 경고한다. 결정 로그에는 `kind: "tool_result_warning"`으로 도구 이름과 규칙 id만 남기고 값은 남기지 않는다. 쿼리 카드에 건수와 규칙이 표시된다.
+- `"confirm"`: 보내기 전에 `ctx.ui.confirm`으로 묻는다. 허용하면 진행(로그에 `confirmed`), 거부하거나 `hasUI`가 없으면 `route()`가 던져 요청이 끝난다. 거부한 도구 결과는 다음 요청에서 다시 묻는다. `analyzer.suspicion_without_local: "confirm"`도 같은 방식이다.
+- 한계: `warn`은 전송 직전이라 사용자가 중단하지 않으면 그대로 나간다.
+- **후속 요청** (`analyzer.followup_max_chars`): 짧은 요청은 직전 사용자 메시지 2개(각 300자)와 직전 어시스턴트 답변 끝 400자를 `[이전 대화]`로 붙여 판단 모델에 보내고, 1단 규칙도 이 텍스트 전체에 적용한다.
+- **재시도 전환**: `reason: "retry"`에서 오류가 공급자 일시 장애(`isProviderFault`)면 같은 티어의 다른 모델로 넘긴다(캐시 포기, 데이터 정책 동일). 컨텍스트 초과는 제외한다.
+
 ## 7. 런타임 (pi virtual model)
 
 ### 7.1 등록
@@ -299,8 +317,11 @@ test/                       stage1, stage2, analyze, decide 단위 테스트 (no
 ## 8. 기록과 프라이버시
 
 - 위치: `~/.pi/agent/llm-router/decisions.jsonl`, `outcomes.jsonl`(로컬 전용, 외부 전송 기능 없음).
+- `decisions.jsonl`의 각 줄은 `kind: "decision"`(쿼리 결정) 또는 `kind: "tool_result_warning"`(§6.6) 기록이며, 둘 다 `decision-log` 스키마를 따른다. 테스트(`test/runtime.test.ts`)가 실제 기록을 스키마로 검사한다.
 - 결정 로그(schema: decision-log)에는 **쿼리 원문, 파일 내용, 매치된 민감 문자열을 저장하지 않는다.**
   - `prompt_hash`: 로컬 비밀 솔트로 만든 HMAC-SHA256(첫 16바이트).
+  - 파일은 0600, 디렉터리는 0700이다. 5MB를 넘으면 `decisions.{1..3}.jsonl`로 민다.
+  - 디버그 출력(`LLM_ROUTER_DEBUG_STAGE2`)은 비밀 값을 가리고, 개인정보·기밀 표식이 보이면 본문을 생략한다(0600).
   - 민감도 근거는 **규칙 이름만** 저장한다(예: `pii.phone_kr`). 매치된 값은 저장하지 않는다.
   - `difficulty_rationale`은 판단 모델이 생성한 문장이라 원문 일부가 들어갈 수 있다. 민감 세션이면 저장하지 않는다.
 - 결과 로그(schema: outcome-log)의 암묵 라벨: `escalated`, `user_pinned_up`, `user_pinned_down`, `verify_exit_code`, `tool_error_loop`, `aborted`, `feedback`(06 §5.7).
