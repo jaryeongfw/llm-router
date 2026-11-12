@@ -1,0 +1,24 @@
+{
+  "$comment": "~/.pi/agent/llm-router.json 으로 복사해 쓴다 (또는 LLM_ROUTER_CONFIG 환경 변수로 경로 지정). 적은 항목만 기본값을 덮어쓴다.",
+  "local_models": [
+    "my-provider/my-local-coder",
+    {
+      "ref": "my-provider/my-local-backup",
+      "context_window": 65536
+    }
+  ],
+  "analyzer": {
+    "prefer": "local"
+  },
+  "internal_markers": {
+    "domains": [
+      "corp.example"
+    ],
+    "path_prefixes": [
+      "/srv/internal/"
+    ],
+    "keywords": [
+      "프로젝트X"
+    ]
+  }
+}

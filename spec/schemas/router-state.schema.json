@@ -57,6 +57,16 @@
     },
     "operating_point": {
       "$ref": "common.schema.json#/$defs/operating_point"
+    },
+    "query_id": {
+      "type": "string",
+      "description": "이 결정을 만든 사용자 쿼리 (해시 기반 id)"
+    },
+    "scope": {
+      "enum": [
+        "query",
+        "session"
+      ]
     }
   }
 }

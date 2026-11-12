@@ -3,9 +3,12 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
 import { bandOf, clampThinking, decide, type AnalysisInput, type DecideConfig, type Roster, type RoutingTable } from "../src/decide.ts";
+import { resolveRoster, type CatalogModel } from "../src/models.ts";
 
 const rd = (p: string) => JSON.parse(readFileSync(join(import.meta.dirname, "..", p), "utf8"));
-const roster = rd("config/roster.json") as Roster;
+const LOCAL = ["acme/local-coder", "acme/local-backup"];
+const catalog: CatalogModel[] = [...LOCAL, "anthropic/claude-haiku-5-5", "anthropic/claude-sonnet-5-5", "anthropic/claude-opus-5-5"].map((r) => ({ provider: r.split("/")[0], id: r.slice(r.indexOf("/") + 1), contextWindow: 128000 }));
+const roster = resolveRoster(rd("config/roster.json") as Roster, LOCAL, catalog);
 const table = rd("config/routing-table.v0.json") as RoutingTable;
 const cfg = rd("config/llm-router.default.json") as DecideConfig;
 
@@ -74,12 +77,12 @@ test("quality 운영점에서는 verifiable_down을 하지 않음", () => {
 
 test("민감 데이터는 사내 티어로 제한되고 capped 표시", () => {
   const d = run({ sensitive: true, difficulty: 3 });
-  assert.deepEqual([d.tier, d.model, d.capped], ["local", "simflow/ixi-simflow-codeadvisor", true]);
+  assert.deepEqual([d.tier, d.model, d.capped], ["local", "acme/local-coder", true]);
 });
 
 test("사내 기본 모델을 쓸 수 없으면 티어 내 대체 모델", () => {
-  const d = decide(analysis({ sensitive: true }), roster, table, cfg, "balanced", (ref) => !ref.startsWith("simflow/"));
-  assert.equal(d.model, "lgu-axeng/axengdev/qwen/qwen3-coder-next");
+  const d = decide(analysis({ sensitive: true }), roster, table, cfg, "balanced", (ref) => ref !== "acme/local-coder");
+  assert.equal(d.model, "acme/local-backup");
   assert.ok(d.fallback_reason);
 });
 
@@ -137,4 +140,11 @@ test("모호성 3이면 되묻기 표시", () => {
 test("지원하지 않는 추론 강도는 가까운 값으로", () => {
   assert.equal(clampThinking("off", ["low", "medium", "high"]), "low");
   assert.equal(clampThinking("minimal", ["off", "low"]), "low");
+});
+
+test("local 모델이 없으면 사내 티어가 비고, 민감 데이터는 배정 불가", () => {
+  const noLocal = resolveRoster(rd("config/roster.json") as Roster, [], catalog);
+  assert.equal(noLocal.tiers.find((x) => x.id === "local")!.models.length, 0);
+  assert.equal(decide(analysis({ action: "explain", difficulty: 0 }), noLocal, table, cfg).tier, "light", "local이 없으면 다음 티어");
+  assert.throws(() => decide(analysis({ sensitive: true }), noLocal, table, cfg), /티어가 없습니다/);
 });

@@ -87,16 +87,13 @@ if (!tierIds.includes(table.default_tier)) errors.push(`routing-table.default_ti
 for (const k of ["default_tier", "direct_tier", "side_effect_floor"]) {
   if (!tierIds.includes(pluginConfig[k])) errors.push(`plugin-config.${k}: 없는 티어 ${pluginConfig[k]}`);
 }
-const analyzerByRef = new Map<string, { data_policy: string }>(roster.analyzers.map((m: { ref: string; data_policy: string }) => [m.ref, m]));
-for (const route of ["external_ok", "internal_only"]) {
-  const r = pluginConfig.analyzer[route];
-  for (const ref of [r.model, ...r.fallbacks]) {
-    const m = analyzerByRef.get(ref);
-    if (!m) errors.push(`plugin-config.analyzer.${route}: roster.analyzers에 없음 ${ref}`);
-    // 사내 전용 요청은 사내 분석기만 (07-spec §5.1)
-    else if (route === "internal_only" && m.data_policy !== "internal") errors.push(`plugin-config.analyzer.internal_only: 외부 모델 ${ref}`);
-  }
-}
+// local 티어는 자리표시 하나 (실제 모델은 사용자 설정 local_models)
+const localTier = roster.tiers.find((t: { id: string }) => t.id === "local");
+if (!localTier?.models.some((m: { placeholder?: boolean }) => m.placeholder)) errors.push("roster local 티어: 자리표시(placeholder) 모델이 없음");
+for (const t of roster.tiers) for (const m of t.models) if (m.placeholder && m.data_policy !== "internal") errors.push(`roster ${m.ref}: 자리표시는 internal이어야 함`);
+// 사용자 설정 예시
+const userExample = readJson("config/llm-router.user.example.json");
+schemaCheck("user-config.schema.json", "config/llm-router.user.example.json", userExample);
 const sp = pluginConfig.secret_policy;
 if (sp.tier !== undefined && !tierIds.includes(sp.tier)) errors.push(`plugin-config.secret_policy.tier: 없는 티어 ${sp.tier}`);
 if (sp.mode === "heavy" && roster.tiers.find((t: { id: string }) => t.id === sp.tier)?.models.some((m: { data_policy: string }) => m.data_policy === "internal")) {

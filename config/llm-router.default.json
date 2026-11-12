@@ -4,27 +4,19 @@
   "rules": "config/sensitivity-rules.json",
   "routing_table": "config/routing-table.v0.json",
   "mode": "A",
+  "pin_scope": "query",
+  "local_models": [],
   "default_tier": "heavy",
   "direct_tier": "light",
   "side_effect_floor": "heavy",
   "low_confidence": 0.5,
-  "decision_timeout_ms": 4000,
+  "decision_timeout_ms": 15000,
   "analyzer": {
-    "external_ok": {
-      "model": "anthropic/claude-haiku-5-5",
-      "fallbacks": [
-        "simflow/ixi-simflow-codeadvisor"
-      ],
-      "thinking": "off"
-    },
-    "internal_only": {
-      "model": "simflow/ixi-simflow-codeadvisor",
-      "fallbacks": [
-        "lgu-axeng/axengdev/google/gemma-4-e4b",
-        "lgu-axeng/axengdev/google/gemma-4-e2b"
-      ]
-    },
-    "timeout_ms": 3000,
+    "prefer": "local",
+    "model": null,
+    "claude_auto": true,
+    "timeout_ms": 12000,
+    "max_tokens": 4096,
     "mask_secrets": true
   },
   "secret_policy": {

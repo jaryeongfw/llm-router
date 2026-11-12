@@ -201,7 +201,10 @@ export function decide(
     if (secret && cfg.secret_policy.mode === "heavy" && a.hard_constraints.data_sensitivity === "internal_only") {
       throw new Error("비밀정보와 사내 전용 데이터가 함께 있어 배정할 티어가 없습니다. 비밀정보를 지우고 다시 요청하세요");
     }
-    throw new Error("필수 제약을 만족하는 티어가 없습니다");
+    if (a.hard_constraints.data_sensitivity === "internal_only") {
+      throw new Error("필수 제약을 만족하는 티어가 없습니다: 사내 전용 데이터(개인정보·사내 표식)가 있는데 쓸 수 있는 local 모델이 없습니다. 사용자 설정 local_models에 사내·자체 호스팅 모델을 지정하세요");
+    }
+    throw new Error("필수 제약을 만족하는 티어가 없습니다 (필요 능력 또는 컨텍스트 크기를 만족하는 모델 없음)");
   }
   const pick = primary(chosen, available)!;
 

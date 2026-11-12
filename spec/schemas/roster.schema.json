@@ -7,7 +7,6 @@
     "version",
     "tiers",
     "measure_only",
-    "analyzers",
     "judge"
   ],
   "additionalProperties": false,
@@ -27,13 +26,6 @@
     },
     "measure_only": {
       "type": "array",
-      "items": {
-        "$ref": "#/$defs/model"
-      }
-    },
-    "analyzers": {
-      "type": "array",
-      "minItems": 1,
       "items": {
         "$ref": "#/$defs/model"
       }
@@ -116,6 +108,10 @@
             "fallback"
           ],
           "description": "티어 안에서의 역할. 앞에 있는 primary를 먼저 쓴다"
+        },
+        "placeholder": {
+          "type": "boolean",
+          "description": "local 티어 자리표시. 런타임에 사용자 local_models로 바뀐다"
         }
       }
     },

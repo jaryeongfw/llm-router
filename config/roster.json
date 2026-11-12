@@ -1,20 +1,21 @@
 {
-  "version": 3,
-  "source_note": "단가는 pi-coding-agent 1.5.2 카탈로그(USD/MTok). 추론 강도는 카탈로그 thinkingLevelMap 기준(null = 미지원). 사내 모델은 종량 과금 없음. 실제 비용은 usage로 다시 계산한다.",
+  "version": 4,
+  "source_note": "단가는 pi-coding-agent 1.5.2 카탈로그(USD/MTok). 추론 강도는 카탈로그 thinkingLevelMap 기준(null = 미지원). local 티어는 자리표시이며 사용자 설정으로 채운다. 실제 비용은 usage로 다시 계산한다.",
   "tiers": [
     {
       "id": "local",
       "rank": 0,
-      "description": "사내 모델. 민감 데이터 허용. 출력 16.4K, 텍스트만, 추론 강도 없음",
+      "description": "사내·자체 호스팅 모델. 민감 데이터 허용. 실제 모델은 사용자 설정 local_models로 지정한다",
       "models": [
         {
-          "ref": "simflow/ixi-simflow-codeadvisor",
+          "ref": "local/default",
+          "placeholder": true,
           "role": "primary",
           "data_policy": "internal",
           "price": null,
           "unmetered": true,
           "context_window": 128000,
-          "max_output": 16400,
+          "max_output": 16384,
           "capabilities": [
             "tool_use"
           ],
@@ -22,24 +23,7 @@
             "off"
           ],
           "default_thinking": "off",
-          "note": "기본. 사용자 평가상 qwen3-coder-next보다 우수. 도구 호출 확인(2턴 1.9초, 2026-11-11)"
-        },
-        {
-          "ref": "lgu-axeng/axengdev/qwen/qwen3-coder-next",
-          "role": "fallback",
-          "data_policy": "internal",
-          "price": null,
-          "unmetered": true,
-          "context_window": 128000,
-          "max_output": 16400,
-          "capabilities": [
-            "tool_use"
-          ],
-          "thinking_levels": [
-            "off"
-          ],
-          "default_thinking": "off",
-          "note": "대체. 2026-11-11 현재 네트워크에서 503(사이트 차단) 응답"
+          "note": "자리표시. 런타임이 사용자 설정 local_models(쓸 수 있는 것만)로 바꾼다. 없으면 local 티어는 비어 있다"
         }
       ]
     },
@@ -190,113 +174,6 @@
       ],
       "default_thinking": "high",
       "note": "최상위 후보. 측정에서 heavy 대비 독립적 이득이 보이면 티어로 승격"
-    },
-    {
-      "ref": "lgu-axeng/axengdev/openai/gpt-oss-120b",
-      "data_policy": "internal",
-      "price": null,
-      "unmetered": true,
-      "context_window": 128000,
-      "max_output": 16400,
-      "capabilities": [
-        "tool_use"
-      ],
-      "thinking_levels": [
-        "off"
-      ],
-      "default_thinking": "off",
-      "note": "사내 대체 후보"
-    }
-  ],
-  "analyzers": [
-    {
-      "ref": "anthropic/claude-haiku-5-5",
-      "role": "primary",
-      "data_policy": "external_vendor",
-      "price": {
-        "input": 0.1,
-        "output": 0.5,
-        "cache_read": 0.01,
-        "cache_write": 0.125
-      },
-      "context_window": 1000000,
-      "max_output": 128000,
-      "capabilities": [
-        "tool_use",
-        "image_input",
-        "long_context_200k",
-        "long_context_1m",
-        "structured_output",
-        "reasoning"
-      ],
-      "thinking_levels": [
-        "off",
-        "low",
-        "medium",
-        "high",
-        "xhigh",
-        "max"
-      ],
-      "default_thinking": "low",
-      "price_above": {
-        "above_input_tokens": 100000,
-        "input": 0.5,
-        "output": 2.5,
-        "cache_read": 0.05,
-        "cache_write": 0.625
-      },
-      "note": "external_ok 요청의 2단 분석기 (thinking off)"
-    },
-    {
-      "ref": "simflow/ixi-simflow-codeadvisor",
-      "role": "primary",
-      "data_policy": "internal",
-      "price": null,
-      "unmetered": true,
-      "context_window": 128000,
-      "max_output": 16400,
-      "capabilities": [
-        "tool_use"
-      ],
-      "thinking_levels": [
-        "off"
-      ],
-      "default_thinking": "off",
-      "note": "internal_only 요청의 2단 분석기, external_ok 대체"
-    },
-    {
-      "ref": "lgu-axeng/axengdev/google/gemma-4-e4b",
-      "role": "fallback",
-      "data_policy": "internal",
-      "price": null,
-      "unmetered": true,
-      "context_window": 128000,
-      "max_output": 16400,
-      "capabilities": [
-        "tool_use"
-      ],
-      "thinking_levels": [
-        "off"
-      ],
-      "default_thinking": "off",
-      "note": "2단 분석기 대체 1"
-    },
-    {
-      "ref": "lgu-axeng/axengdev/google/gemma-4-e2b",
-      "role": "fallback",
-      "data_policy": "internal",
-      "price": null,
-      "unmetered": true,
-      "context_window": 128000,
-      "max_output": 16400,
-      "capabilities": [
-        "tool_use"
-      ],
-      "thinking_levels": [
-        "off"
-      ],
-      "default_thinking": "off",
-      "note": "2단 분석기 대체 2"
     }
   ],
   "judge": {

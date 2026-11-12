@@ -21,7 +21,9 @@
     "operating_points",
     "thinking_rules",
     "secret_policy",
-    "verifiable_down"
+    "verifiable_down",
+    "pin_scope",
+    "local_models"
   ],
   "additionalProperties": false,
   "properties": {
@@ -65,18 +67,36 @@
     "analyzer": {
       "type": "object",
       "required": [
-        "external_ok",
-        "internal_only",
+        "prefer",
+        "model",
+        "claude_auto",
         "timeout_ms",
-        "mask_secrets"
+        "mask_secrets",
+        "max_tokens"
       ],
       "additionalProperties": false,
       "properties": {
-        "external_ok": {
-          "$ref": "common.schema.json#/$defs/analyzer_route"
+        "prefer": {
+          "enum": [
+            "local",
+            "claude"
+          ],
+          "description": "외부 전송 가능한 요청에서 먼저 시도할 판단 모델. 사내 전용 요청은 항상 local만"
         },
-        "internal_only": {
-          "$ref": "common.schema.json#/$defs/analyzer_route"
+        "model": {
+          "anyOf": [
+            {
+              "$ref": "common.schema.json#/$defs/model_ref"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "판단 모델을 직접 지정 (쓸 수 없으면 무시)"
+        },
+        "claude_auto": {
+          "type": "boolean",
+          "description": "쓸 수 있는 Claude 모델 중 판단 모델을 자동 선택 (haiku 최신 우선)"
         },
         "timeout_ms": {
           "type": "integer",
@@ -84,9 +104,13 @@
         },
         "mask_secrets": {
           "type": "boolean"
+        },
+        "max_tokens": {
+          "type": "integer",
+          "minimum": 256,
+          "description": "판단 모델 출력 상한. 추론형 모델은 사고 과정이 먼저 나오므로 넉넉하게"
         }
-      },
-      "description": "1단 민감도 판정에 따라 분석기를 고른다. internal_only 요청은 사내 분석기만"
+      }
     },
     "internal_markers": {
       "type": "object",
@@ -286,6 +310,57 @@
           "maximum": 1
         }
       }
+    },
+    "pin_scope": {
+      "enum": [
+        "query",
+        "session"
+      ],
+      "description": "query: 사용자 쿼리마다 다시 결정 / session: 세션 첫 쿼리 결정을 유지"
+    },
+    "local_models": {
+      "type": "array",
+      "items": {
+        "anyOf": [
+          {
+            "$ref": "common.schema.json#/$defs/model_ref"
+          },
+          {
+            "type": "object",
+            "required": [
+              "ref"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "ref": {
+                "$ref": "common.schema.json#/$defs/model_ref"
+              },
+              "context_window": {
+                "type": "integer"
+              },
+              "max_output": {
+                "type": "integer"
+              },
+              "capabilities": {
+                "type": "array",
+                "items": {
+                  "$ref": "common.schema.json#/$defs/capability"
+                }
+              },
+              "thinking_levels": {
+                "type": "array",
+                "items": {
+                  "$ref": "common.schema.json#/$defs/thinking"
+                }
+              }
+            }
+          }
+        ]
+      },
+      "description": "local 티어에 넣을 사내·자체 호스팅 모델 (앞에서부터 primary, fallback)"
+    },
+    "$comment": {
+      "type": "string"
     }
   }
 }
