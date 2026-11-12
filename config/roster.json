@@ -1,0 +1,294 @@
+{
+  "version": 2,
+  "source_note": "단가는 pi-coding-agent 1.5.2 카탈로그(USD/MTok). 추론 강도는 카탈로그 thinkingLevelMap 기준(null = 미지원). 사내 모델은 종량 과금 없음. 실제 비용은 usage로 다시 계산한다.",
+  "tiers": [
+    {
+      "id": "local",
+      "rank": 0,
+      "description": "사내 모델. 민감 데이터 허용. 출력 16.4K, 텍스트만, 추론 강도 없음",
+      "models": [
+        {
+          "ref": "simflow/ixi-simflow-codeadvisor",
+          "role": "primary",
+          "data_policy": "internal",
+          "price": null,
+          "unmetered": true,
+          "context_window": 128000,
+          "max_output": 16400,
+          "capabilities": [
+            "tool_use"
+          ],
+          "thinking_levels": [
+            "off"
+          ],
+          "default_thinking": "off",
+          "note": "기본. 사용자 평가상 qwen3-coder-next보다 우수. 도구 호출 확인(2턴 1.9초, 2026-11-11)"
+        },
+        {
+          "ref": "lgu-axeng/axengdev/qwen/qwen3-coder-next",
+          "role": "fallback",
+          "data_policy": "internal",
+          "price": null,
+          "unmetered": true,
+          "context_window": 128000,
+          "max_output": 16400,
+          "capabilities": [
+            "tool_use"
+          ],
+          "thinking_levels": [
+            "off"
+          ],
+          "default_thinking": "off",
+          "note": "대체. 2026-11-11 현재 네트워크에서 503(사이트 차단) 응답"
+        }
+      ]
+    },
+    {
+      "id": "light",
+      "rank": 1,
+      "description": "외부 벤더 경량",
+      "models": [
+        {
+          "ref": "anthropic/claude-haiku-5-5",
+          "role": "primary",
+          "data_policy": "external_vendor",
+          "price": {
+            "input": 0.1,
+            "output": 0.5,
+            "cache_read": 0.01,
+            "cache_write": 0.125
+          },
+          "context_window": 1000000,
+          "max_output": 128000,
+          "capabilities": [
+            "tool_use",
+            "image_input",
+            "long_context_200k",
+            "long_context_1m",
+            "structured_output",
+            "reasoning"
+          ],
+          "thinking_levels": [
+            "off",
+            "low",
+            "medium",
+            "high",
+            "xhigh",
+            "max"
+          ],
+          "default_thinking": "low",
+          "price_above": {
+            "above_input_tokens": 100000,
+            "input": 0.5,
+            "output": 2.5,
+            "cache_read": 0.05,
+            "cache_write": 0.625
+          }
+        }
+      ]
+    },
+    {
+      "id": "standard",
+      "rank": 2,
+      "description": "외부 벤더 표준",
+      "models": [
+        {
+          "ref": "anthropic/claude-sonnet-5-5",
+          "role": "primary",
+          "data_policy": "external_vendor",
+          "price": {
+            "input": 2,
+            "output": 10,
+            "cache_read": 0.1,
+            "cache_write": 2.5
+          },
+          "context_window": 1000000,
+          "max_output": 128000,
+          "capabilities": [
+            "tool_use",
+            "image_input",
+            "long_context_200k",
+            "long_context_1m",
+            "structured_output",
+            "reasoning"
+          ],
+          "thinking_levels": [
+            "low",
+            "medium",
+            "high",
+            "xhigh",
+            "max"
+          ],
+          "default_thinking": "medium"
+        }
+      ]
+    },
+    {
+      "id": "heavy",
+      "rank": 3,
+      "description": "외부 벤더 프런티어",
+      "models": [
+        {
+          "ref": "anthropic/claude-opus-5-5",
+          "role": "primary",
+          "data_policy": "external_vendor",
+          "price": {
+            "input": 4,
+            "output": 20,
+            "cache_read": 0.2,
+            "cache_write": 5
+          },
+          "context_window": 1000000,
+          "max_output": 128000,
+          "capabilities": [
+            "tool_use",
+            "image_input",
+            "long_context_200k",
+            "long_context_1m",
+            "structured_output",
+            "reasoning"
+          ],
+          "thinking_levels": [
+            "low",
+            "medium",
+            "high",
+            "xhigh",
+            "max"
+          ],
+          "default_thinking": "medium"
+        }
+      ]
+    }
+  ],
+  "measure_only": [
+    {
+      "ref": "anthropic/claude-fable-5-2",
+      "data_policy": "external_vendor",
+      "price": {
+        "input": 8,
+        "output": 40,
+        "cache_read": 0.2,
+        "cache_write": 10
+      },
+      "context_window": 1000000,
+      "max_output": 128000,
+      "capabilities": [
+        "tool_use",
+        "image_input",
+        "long_context_200k",
+        "long_context_1m",
+        "structured_output",
+        "reasoning"
+      ],
+      "thinking_levels": [
+        "minimal",
+        "low",
+        "medium",
+        "high",
+        "xhigh",
+        "max"
+      ],
+      "default_thinking": "high",
+      "note": "최상위 후보. 측정에서 heavy 대비 독립적 이득이 보이면 티어로 승격"
+    },
+    {
+      "ref": "lgu-axeng/axengdev/openai/gpt-oss-120b",
+      "data_policy": "internal",
+      "price": null,
+      "unmetered": true,
+      "context_window": 128000,
+      "max_output": 16400,
+      "capabilities": [
+        "tool_use"
+      ],
+      "thinking_levels": [
+        "off"
+      ],
+      "default_thinking": "off",
+      "note": "사내 대체 후보"
+    }
+  ],
+  "analyzers": [
+    {
+      "ref": "simflow/ixi-simflow-codeadvisor",
+      "role": "primary",
+      "data_policy": "internal",
+      "price": null,
+      "unmetered": true,
+      "context_window": 128000,
+      "max_output": 16400,
+      "capabilities": [
+        "tool_use"
+      ],
+      "thinking_levels": [
+        "off"
+      ],
+      "default_thinking": "off",
+      "note": "2단 분석기 기본 (local 티어와 겸용)"
+    },
+    {
+      "ref": "lgu-axeng/axengdev/google/gemma-4-e4b",
+      "role": "fallback",
+      "data_policy": "internal",
+      "price": null,
+      "unmetered": true,
+      "context_window": 128000,
+      "max_output": 16400,
+      "capabilities": [
+        "tool_use"
+      ],
+      "thinking_levels": [
+        "off"
+      ],
+      "default_thinking": "off",
+      "note": "2단 분석기 대체 1"
+    },
+    {
+      "ref": "lgu-axeng/axengdev/google/gemma-4-e2b",
+      "role": "fallback",
+      "data_policy": "internal",
+      "price": null,
+      "unmetered": true,
+      "context_window": 128000,
+      "max_output": 16400,
+      "capabilities": [
+        "tool_use"
+      ],
+      "thinking_levels": [
+        "off"
+      ],
+      "default_thinking": "off",
+      "note": "2단 분석기 대체 2"
+    }
+  ],
+  "judge": {
+    "ref": "anthropic/claude-sonnet-5-5",
+    "role": "primary",
+    "data_policy": "external_vendor",
+    "price": {
+      "input": 2,
+      "output": 10,
+      "cache_read": 0.1,
+      "cache_write": 2.5
+    },
+    "context_window": 1000000,
+    "max_output": 128000,
+    "capabilities": [
+      "tool_use",
+      "image_input",
+      "long_context_200k",
+      "long_context_1m",
+      "structured_output",
+      "reasoning"
+    ],
+    "thinking_levels": [
+      "low",
+      "medium",
+      "high",
+      "xhigh",
+      "max"
+    ],
+    "default_thinking": "low",
+    "note": "루브릭 판정 고정 모델(thinking low). 판정 대상과 같은 모델일 때의 편향은 S5에서 사람 대조로 점검"
+  }
+}

@@ -1,0 +1,271 @@
+{
+  "version": 1,
+  "note": "1단 규칙. 재현율 우선. 매치된 값은 어디에도 기록하지 않고 규칙 id만 남긴다.",
+  "rules": [
+    {
+      "id": "secret.private_key",
+      "group": "secret",
+      "kind": "regex",
+      "effect": {
+        "data_sensitivity": "internal_only"
+      },
+      "pattern": "-----BEGIN (?:RSA |EC |OPENSSH |DSA |)PRIVATE KEY-----"
+    },
+    {
+      "id": "secret.aws_access_key",
+      "group": "secret",
+      "kind": "regex",
+      "effect": {
+        "data_sensitivity": "internal_only"
+      },
+      "pattern": "\\b(?:AKIA|ASIA)[0-9A-Z]{16}\\b"
+    },
+    {
+      "id": "secret.sk_api_key",
+      "group": "secret",
+      "kind": "regex",
+      "effect": {
+        "data_sensitivity": "internal_only"
+      },
+      "pattern": "\\bsk-(?:ant-|proj-)?[A-Za-z0-9_-]{20,}\\b"
+    },
+    {
+      "id": "secret.github_token",
+      "group": "secret",
+      "kind": "regex",
+      "effect": {
+        "data_sensitivity": "internal_only"
+      },
+      "pattern": "\\bgh[pousr]_[A-Za-z0-9]{30,}\\b"
+    },
+    {
+      "id": "secret.jwt",
+      "group": "secret",
+      "kind": "regex",
+      "effect": {
+        "data_sensitivity": "internal_only"
+      },
+      "pattern": "\\beyJ[A-Za-z0-9_-]{8,}\\.eyJ[A-Za-z0-9_-]{8,}\\.[A-Za-z0-9_-]{8,}\\b"
+    },
+    {
+      "id": "secret.password_assign",
+      "group": "secret",
+      "kind": "regex",
+      "effect": {
+        "data_sensitivity": "internal_only"
+      },
+      "pattern": "(?:password|passwd|pwd|비밀번호|secret|api[_-]?key|token)\\s*[:=]\\s*['\"]?[^\\s'\"]{6,}",
+      "flags": "i"
+    },
+    {
+      "id": "secret.conn_string",
+      "group": "secret",
+      "kind": "regex",
+      "effect": {
+        "data_sensitivity": "internal_only"
+      },
+      "pattern": "\\b[a-z][a-z0-9+]*://[^\\s:/@]+:[^\\s@/]+@[^\\s/]+",
+      "flags": "i",
+      "note": "user:pass@host 형식 접속 문자열"
+    },
+    {
+      "id": "pii.kr_rrn",
+      "group": "pii",
+      "kind": "regex",
+      "effect": {
+        "data_sensitivity": "internal_only"
+      },
+      "pattern": "(?<!\\d)\\d{6}\\s?-\\s?[1-8]\\d{6}(?!\\d)",
+      "validator": "kr_rrn_shape",
+      "note": "형식만 검사. 날짜 유효성은 보지 않는다(재현율 우선)"
+    },
+    {
+      "id": "pii.phone_kr",
+      "group": "pii",
+      "kind": "regex",
+      "effect": {
+        "data_sensitivity": "internal_only"
+      },
+      "pattern": "(?<!\\d)01[016789][-.\\s]?\\d{3,4}[-.\\s]?\\d{4}(?!\\d)"
+    },
+    {
+      "id": "pii.email",
+      "group": "pii",
+      "kind": "regex",
+      "effect": {
+        "data_sensitivity": "internal_only"
+      },
+      "pattern": "\\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}\\b",
+      "note": "코드 예시의 example.com도 잡는다(재현율 우선)"
+    },
+    {
+      "id": "pii.card_number",
+      "group": "pii",
+      "kind": "regex",
+      "effect": {
+        "data_sensitivity": "internal_only"
+      },
+      "pattern": "(?<!\\d)(?:\\d[ -]?){13,19}(?!\\d)",
+      "validator": "luhn"
+    },
+    {
+      "id": "internal_marker.keywords_ko",
+      "group": "internal_marker",
+      "kind": "keywords",
+      "effect": {
+        "data_sensitivity": "internal_only"
+      },
+      "keywords": [
+        "대외비",
+        "사내 기밀",
+        "고객 정보",
+        "고객정보",
+        "개인정보",
+        "내부 전용",
+        "외부 유출 금지"
+      ]
+    },
+    {
+      "id": "internal_marker.keywords_en",
+      "group": "internal_marker",
+      "kind": "keywords",
+      "effect": {
+        "data_sensitivity": "internal_only"
+      },
+      "keywords": [
+        "confidential",
+        "internal only",
+        "do not distribute",
+        "customer data",
+        "PII"
+      ]
+    },
+    {
+      "id": "internal_marker.domains",
+      "group": "internal_marker",
+      "kind": "config_list",
+      "effect": {
+        "data_sensitivity": "internal_only"
+      },
+      "config_key": "internal_markers.domains"
+    },
+    {
+      "id": "internal_marker.paths",
+      "group": "internal_marker",
+      "kind": "config_list",
+      "effect": {
+        "data_sensitivity": "internal_only"
+      },
+      "config_key": "internal_markers.path_prefixes"
+    },
+    {
+      "id": "internal_marker.user_keywords",
+      "group": "internal_marker",
+      "kind": "config_list",
+      "effect": {
+        "data_sensitivity": "internal_only"
+      },
+      "config_key": "internal_markers.keywords"
+    },
+    {
+      "id": "user_explicit.local_tag",
+      "group": "user_explicit",
+      "kind": "regex",
+      "effect": {
+        "data_sensitivity": "internal_only"
+      },
+      "pattern": "(?:^|\\s)#local\\b"
+    },
+    {
+      "id": "user_explicit.no_external",
+      "group": "user_explicit",
+      "kind": "keywords",
+      "effect": {
+        "data_sensitivity": "internal_only"
+      },
+      "keywords": [
+        "외부로 보내지 마",
+        "외부 모델 쓰지 마",
+        "로컬 모델로만",
+        "외부 전송 금지"
+      ]
+    },
+    {
+      "id": "side_effect.deploy",
+      "group": "side_effect",
+      "kind": "regex",
+      "effect": {
+        "irreversible_side_effects": true
+      },
+      "pattern": "(?:운영|프로덕션|prod(?:uction)?|라이브)\\s*(?:환경)?\\s*(?:에|으로|로|to)?\\s*(?:배포|반영|릴리스|deploy|release)",
+      "flags": "i"
+    },
+    {
+      "id": "side_effect.migration_run",
+      "group": "side_effect",
+      "kind": "regex",
+      "effect": {
+        "irreversible_side_effects": true
+      },
+      "pattern": "(?:마이그레이션|migration)\\s*(?:을|를)?\\s*(?:실행|적용|돌려|run|apply)",
+      "flags": "i"
+    },
+    {
+      "id": "side_effect.git_push",
+      "group": "side_effect",
+      "kind": "regex",
+      "effect": {
+        "irreversible_side_effects": true
+      },
+      "pattern": "\\bgit\\s+push\\b|\\b(?:푸시|push)\\s*(?:해|까지)",
+      "flags": "i"
+    },
+    {
+      "id": "side_effect.destructive",
+      "group": "side_effect",
+      "kind": "regex",
+      "effect": {
+        "irreversible_side_effects": true
+      },
+      "pattern": "\\brm\\s+-[a-z]*r[a-z]*f|\\bdrop\\s+(?:table|database)\\b|\\btruncate\\s+table\\b|(?:DB|데이터베이스|테이블|버킷|데이터)\\S*\\s*(?:전부|모두|를|을)?\\s*(?:삭제|지워|날려)",
+      "flags": "i"
+    },
+    {
+      "id": "side_effect.remote_write",
+      "group": "side_effect",
+      "kind": "keywords",
+      "effect": {
+        "irreversible_side_effects": true
+      },
+      "keywords": [
+        "메일 발송해",
+        "메일 보내줘",
+        "메일 보내 줘",
+        "공지 발송해",
+        "공지 올려",
+        "이슈 닫아",
+        "티켓 상태 변경해",
+        "슬랙에 올려",
+        "Slack에 올려"
+      ],
+      "note": "실행을 요청하는 명령형 표현만. \"메일 발송 실패 확인\" 같은 서술은 제외"
+    },
+    {
+      "id": "capability.image",
+      "group": "capability",
+      "kind": "attachment",
+      "effect": {
+        "add_capability": "image_input"
+      }
+    },
+    {
+      "id": "capability.long_context",
+      "group": "capability",
+      "kind": "context_estimate",
+      "effect": {
+        "add_capability": "long_context_200k"
+      },
+      "threshold_tokens": 100000
+    }
+  ]
+}

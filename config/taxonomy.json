@@ -1,0 +1,244 @@
+{
+  "version": 1,
+  "domains": [
+    {
+      "id": "backend",
+      "name": "백엔드",
+      "description": "서버 측 비즈니스 로직, API, 서비스 계층, 도메인 모델, 영속성 코드",
+      "includes": [
+        "주문·결제 서비스 로직",
+        "REST 핸들러",
+        "리포지토리 계층"
+      ],
+      "excludes": [
+        "SQL 쿼리 자체가 결과물인 작업 → data",
+        "배포·운영 스크립트 → infra"
+      ]
+    },
+    {
+      "id": "frontend",
+      "name": "프런트엔드",
+      "description": "UI 컴포넌트, 화면 상태 관리, 클라이언트 측 유틸리티(포맷, 검증)",
+      "includes": [
+        "상태 리듀서",
+        "입력 검증 함수",
+        "표시 형식 함수"
+      ],
+      "excludes": [
+        "서버 API 구현 → backend"
+      ]
+    },
+    {
+      "id": "data",
+      "name": "데이터·SQL",
+      "description": "SQL 쿼리, 리포트, 데이터 변환·집계, 스키마",
+      "includes": [
+        "집계 쿼리",
+        "리포트 정합성 디버깅",
+        "코호트 분석"
+      ],
+      "excludes": [
+        "ORM을 쓰는 서비스 로직 → backend"
+      ]
+    },
+    {
+      "id": "infra",
+      "name": "인프라·운영",
+      "description": "셸 스크립트, 배포·운영 자동화, 설정, 모니터링",
+      "includes": [
+        "로그 정리 스크립트",
+        "배포 절차",
+        "운영 런북의 명령"
+      ],
+      "excludes": [
+        "운영 문서 작성이 주 결과물 → docs"
+      ]
+    },
+    {
+      "id": "docs",
+      "name": "문서·보고서",
+      "description": "사람이 읽는 문서가 주 결과물인 작업",
+      "includes": [
+        "릴리스 노트",
+        "런북",
+        "사용 가이드",
+        "보고서"
+      ],
+      "excludes": [
+        "코드 주석·docstring만 고치는 작업 → 해당 코드 도메인"
+      ]
+    },
+    {
+      "id": "general",
+      "name": "일반 지식",
+      "description": "특정 저장소에 묶이지 않는 개념·지식 질문",
+      "includes": [
+        "개념 설명",
+        "도구 사용법 일반"
+      ],
+      "excludes": [
+        "저장소 코드에 대한 질문 → 해당 도메인"
+      ]
+    }
+  ],
+  "actions": [
+    {
+      "id": "explain",
+      "name": "설명·질의응답",
+      "description": "코드나 개념을 설명한다. 결과물은 답변 텍스트이고 파일을 바꾸지 않는다",
+      "includes": [
+        "이 함수가 하는 일",
+        "처리 흐름 설명",
+        "개념 비교"
+      ],
+      "excludes": [
+        "코드 변경 요청 포함 → code_modify 등",
+        "선택지 비교 후 권고 → design"
+      ],
+      "crb_mapping": [
+        "Code Understanding"
+      ]
+    },
+    {
+      "id": "code_modify",
+      "name": "코드 수정",
+      "description": "요구가 명확한 작은 변경. 무엇을 바꿀지 요청에 이미 정해져 있다",
+      "includes": [
+        "상수·메시지 변경",
+        "조건 하나 추가",
+        "플래그 추가"
+      ],
+      "excludes": [
+        "원인을 찾아야 하는 결함 → debug",
+        "새 기능 단위 → implement",
+        "동작 보존 구조 변경 → refactor"
+      ],
+      "crb_mapping": [
+        "Code Completion"
+      ]
+    },
+    {
+      "id": "implement",
+      "name": "신규 구현",
+      "description": "새 함수·기능·모듈을 만든다. 인터페이스나 동작을 새로 정의한다",
+      "includes": [
+        "새 API 함수",
+        "새 검증기",
+        "새 정책 처리"
+      ],
+      "excludes": [
+        "기존 동작의 결함 수정 → debug"
+      ],
+      "crb_mapping": [
+        "Code Generation",
+        "Algorithm Design"
+      ]
+    },
+    {
+      "id": "debug",
+      "name": "디버깅·원인 분석",
+      "description": "관찰된 잘못된 동작의 원인을 찾고 고친다. 원인 위치가 요청에 명시되지 않는다",
+      "includes": [
+        "합계가 틀림",
+        "중복 집계",
+        "경계값 오류"
+      ],
+      "excludes": [
+        "고칠 위치와 방법이 명시됨 → code_modify"
+      ],
+      "crb_mapping": [
+        "Bug Fixing"
+      ]
+    },
+    {
+      "id": "refactor",
+      "name": "리팩터링",
+      "description": "외부 동작을 바꾸지 않고 구조를 바꾼다",
+      "includes": [
+        "중복 제거",
+        "규칙 테이블화",
+        "모듈 분리"
+      ],
+      "excludes": [
+        "동작 변경 포함 → implement / code_modify"
+      ],
+      "crb_mapping": [
+        "Code Refactoring"
+      ]
+    },
+    {
+      "id": "test_write",
+      "name": "테스트 작성",
+      "description": "기존 코드에 대한 테스트를 작성한다",
+      "includes": [
+        "단위 테스트 추가",
+        "경계값 테스트"
+      ],
+      "excludes": [
+        "테스트를 통과시키는 코드 수정 → debug / implement"
+      ],
+      "crb_mapping": [
+        "Test Generation"
+      ]
+    },
+    {
+      "id": "review",
+      "name": "코드 리뷰",
+      "description": "변경(diff)이나 코드의 결함·위험을 찾아 지적한다. 파일은 바꾸지 않는다",
+      "includes": [
+        "PR 리뷰",
+        "보안·정합성 점검"
+      ],
+      "excludes": [
+        "지적 후 직접 수정 → debug / refactor"
+      ],
+      "crb_mapping": []
+    },
+    {
+      "id": "design",
+      "name": "설계·판단",
+      "description": "선택지를 비교하고 트레이드오프를 근거로 권고한다",
+      "includes": [
+        "저장 방식 비교",
+        "캐시 전략",
+        "마이그레이션 계획"
+      ],
+      "excludes": [
+        "단일 정답 설명 → explain"
+      ],
+      "crb_mapping": []
+    },
+    {
+      "id": "docs_write",
+      "name": "문서 작성",
+      "description": "사람이 읽는 문서를 작성·갱신한다",
+      "includes": [
+        "릴리스 노트",
+        "런북",
+        "API 가이드"
+      ],
+      "excludes": [
+        "코드 설명 답변 → explain"
+      ],
+      "crb_mapping": [
+        "Code Understanding"
+      ]
+    },
+    {
+      "id": "data_transform",
+      "name": "데이터 분석·변환",
+      "description": "데이터를 조회·집계·변환하는 쿼리나 스크립트를 새로 작성한다",
+      "includes": [
+        "월별 매출",
+        "코호트 리텐션",
+        "포맷 변환"
+      ],
+      "excludes": [
+        "기존 쿼리의 결함 수정 → debug"
+      ],
+      "crb_mapping": [
+        "Data Science"
+      ]
+    }
+  ]
+}

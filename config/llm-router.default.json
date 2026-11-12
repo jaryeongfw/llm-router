@@ -1,0 +1,52 @@
+{
+  "roster": "config/roster.json",
+  "taxonomy": "config/taxonomy.json",
+  "rules": "config/sensitivity-rules.json",
+  "routing_table": "config/routing-table.v0.json",
+  "mode": "A",
+  "default_tier": "heavy",
+  "direct_tier": "light",
+  "side_effect_floor": "heavy",
+  "low_confidence": 0.5,
+  "decision_timeout_ms": 4000,
+  "analyzer": {
+    "model": "simflow/ixi-simflow-codeadvisor",
+    "fallbacks": [
+      "lgu-axeng/axengdev/google/gemma-4-e4b",
+      "lgu-axeng/axengdev/google/gemma-4-e2b"
+    ],
+    "timeout_ms": 3000
+  },
+  "virtual_levels": {
+    "low": "economy",
+    "medium": "balanced",
+    "high": "quality"
+  },
+  "operating_points": {
+    "economy": {
+      "thinking_shift": -1,
+      "allow_verifiable_down": true,
+      "tier_shift": 0
+    },
+    "balanced": {
+      "thinking_shift": 0,
+      "allow_verifiable_down": true,
+      "tier_shift": 0
+    },
+    "quality": {
+      "thinking_shift": 1,
+      "allow_verifiable_down": false,
+      "tier_shift": 0
+    }
+  },
+  "thinking_rules": {
+    "reasoning_up_at": 3,
+    "max_thinking": "xhigh"
+  },
+  "internal_markers": {
+    "domains": [],
+    "path_prefixes": [],
+    "keywords": []
+  },
+  "log_dir": "~/.pi/agent/llm-router"
+}
