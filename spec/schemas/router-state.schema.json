@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "router-state.schema.json",
+  "title": "세션 분기에 저장되는 라우터 상태",
+  "type": "object",
+  "required": [
+    "v",
+    "task_id",
+    "tier",
+    "model",
+    "decided_at",
+    "decision_ref",
+    "mode",
+    "pinned_by",
+    "thinking",
+    "operating_point"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "v": {
+      "const": 1
+    },
+    "task_id": {
+      "type": "string"
+    },
+    "tier": {
+      "$ref": "common.schema.json#/$defs/id"
+    },
+    "model": {
+      "$ref": "common.schema.json#/$defs/model_ref"
+    },
+    "decided_at": {
+      "type": "string"
+    },
+    "decision_ref": {
+      "type": "string"
+    },
+    "mode": {
+      "enum": [
+        "A",
+        "B",
+        "C"
+      ]
+    },
+    "pinned_by": {
+      "enum": [
+        "router",
+        "user",
+        "escalation"
+      ]
+    },
+    "sensitive": {
+      "type": "boolean"
+    },
+    "thinking": {
+      "$ref": "common.schema.json#/$defs/thinking"
+    },
+    "operating_point": {
+      "$ref": "common.schema.json#/$defs/operating_point"
+    }
+  }
+}

@@ -1,0 +1,241 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "common.schema.json",
+  "title": "공통 정의",
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_-]*$"
+    },
+    "model_ref": {
+      "type": "string",
+      "pattern": "^[a-z0-9-]+/.+$",
+      "description": "provider/model-id"
+    },
+    "level": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 0,
+      "maximum": 3
+    },
+    "data_sensitivity": {
+      "enum": [
+        "external_ok",
+        "internal_only"
+      ]
+    },
+    "capability": {
+      "enum": [
+        "tool_use",
+        "image_input",
+        "long_context_200k",
+        "long_context_1m",
+        "structured_output",
+        "reasoning"
+      ]
+    },
+    "price": {
+      "type": "object",
+      "required": [
+        "input",
+        "output",
+        "cache_read",
+        "cache_write"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "input": {
+          "type": "number",
+          "minimum": 0
+        },
+        "output": {
+          "type": "number",
+          "minimum": 0
+        },
+        "cache_read": {
+          "type": "number",
+          "minimum": 0
+        },
+        "cache_write": {
+          "type": "number",
+          "minimum": 0
+        },
+        "above_input_tokens": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "task_type": {
+      "type": "object",
+      "required": [
+        "domain",
+        "action"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "domain": {
+          "$ref": "#/$defs/id"
+        },
+        "action": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/id"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "dimensions": {
+      "type": "object",
+      "required": [
+        "difficulty",
+        "ambiguity",
+        "scope",
+        "verifiability",
+        "consistency",
+        "capabilities"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "difficulty": {
+          "$ref": "#/$defs/level"
+        },
+        "ambiguity": {
+          "$ref": "#/$defs/level"
+        },
+        "scope": {
+          "$ref": "#/$defs/level"
+        },
+        "verifiability": {
+          "$ref": "#/$defs/level"
+        },
+        "consistency": {
+          "$ref": "#/$defs/level"
+        },
+        "capabilities": {
+          "type": "object",
+          "required": [
+            "long_context",
+            "multi_step_tools",
+            "code_correctness",
+            "instruction_following",
+            "korean_writing",
+            "reasoning"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "long_context": {
+              "$ref": "#/$defs/level"
+            },
+            "multi_step_tools": {
+              "$ref": "#/$defs/level"
+            },
+            "code_correctness": {
+              "$ref": "#/$defs/level"
+            },
+            "instruction_following": {
+              "$ref": "#/$defs/level"
+            },
+            "korean_writing": {
+              "$ref": "#/$defs/level"
+            },
+            "reasoning": {
+              "$ref": "#/$defs/level"
+            }
+          }
+        }
+      }
+    },
+    "hard_constraints": {
+      "type": "object",
+      "required": [
+        "data_sensitivity",
+        "irreversible_side_effects",
+        "required_capabilities",
+        "latency",
+        "budget_cap_usd"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "data_sensitivity": {
+          "$ref": "#/$defs/data_sensitivity"
+        },
+        "irreversible_side_effects": {
+          "type": "boolean"
+        },
+        "required_capabilities": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/capability"
+          }
+        },
+        "latency": {
+          "enum": [
+            "interactive",
+            "background"
+          ]
+        },
+        "budget_cap_usd": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0
+        }
+      }
+    },
+    "usage": {
+      "type": "object",
+      "required": [
+        "input",
+        "cache_read",
+        "cache_write",
+        "output"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "input": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "cache_read": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "cache_write": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "output": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "thinking": {
+      "enum": [
+        "off",
+        "minimal",
+        "low",
+        "medium",
+        "high",
+        "xhigh",
+        "max"
+      ],
+      "description": "pi thinking level. 모델이 지원하지 않는 값은 pi가 조정(clamp)한다"
+    },
+    "operating_point": {
+      "enum": [
+        "economy",
+        "balanced",
+        "quality"
+      ]
+    }
+  }
+}

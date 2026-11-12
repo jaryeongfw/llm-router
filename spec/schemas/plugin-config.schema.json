@@ -1,0 +1,238 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "plugin-config.schema.json",
+  "title": "플러그인 설정",
+  "type": "object",
+  "required": [
+    "roster",
+    "taxonomy",
+    "rules",
+    "routing_table",
+    "mode",
+    "default_tier",
+    "direct_tier",
+    "side_effect_floor",
+    "low_confidence",
+    "decision_timeout_ms",
+    "analyzer",
+    "internal_markers",
+    "log_dir",
+    "virtual_levels",
+    "operating_points",
+    "thinking_rules"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "roster": {
+      "type": "string"
+    },
+    "taxonomy": {
+      "type": "string"
+    },
+    "rules": {
+      "type": "string"
+    },
+    "routing_table": {
+      "type": "string"
+    },
+    "mode": {
+      "enum": [
+        "A",
+        "B",
+        "C"
+      ]
+    },
+    "default_tier": {
+      "$ref": "common.schema.json#/$defs/id"
+    },
+    "direct_tier": {
+      "$ref": "common.schema.json#/$defs/id"
+    },
+    "side_effect_floor": {
+      "$ref": "common.schema.json#/$defs/id"
+    },
+    "low_confidence": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "decision_timeout_ms": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "analyzer": {
+      "type": "object",
+      "required": [
+        "model",
+        "fallbacks",
+        "timeout_ms"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "model": {
+          "$ref": "common.schema.json#/$defs/model_ref"
+        },
+        "timeout_ms": {
+          "type": "integer"
+        },
+        "fallbacks": {
+          "type": "array",
+          "items": {
+            "$ref": "common.schema.json#/$defs/model_ref"
+          }
+        }
+      }
+    },
+    "internal_markers": {
+      "type": "object",
+      "required": [
+        "domains",
+        "path_prefixes",
+        "keywords"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "domains": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "path_prefixes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "keywords": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "log_dir": {
+      "type": "string"
+    },
+    "virtual_levels": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "low",
+        "medium",
+        "high"
+      ],
+      "properties": {
+        "low": {
+          "$ref": "common.schema.json#/$defs/operating_point"
+        },
+        "medium": {
+          "$ref": "common.schema.json#/$defs/operating_point"
+        },
+        "high": {
+          "$ref": "common.schema.json#/$defs/operating_point"
+        }
+      },
+      "description": "virtual model에서 고른 thinking level을 운영점으로 해석한다"
+    },
+    "operating_points": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "economy",
+        "balanced",
+        "quality"
+      ],
+      "properties": {
+        "economy": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "thinking_shift",
+            "allow_verifiable_down"
+          ],
+          "properties": {
+            "thinking_shift": {
+              "type": "integer",
+              "minimum": -2,
+              "maximum": 2
+            },
+            "allow_verifiable_down": {
+              "type": "boolean"
+            },
+            "tier_shift": {
+              "type": "integer",
+              "minimum": -1,
+              "maximum": 1
+            }
+          }
+        },
+        "balanced": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "thinking_shift",
+            "allow_verifiable_down"
+          ],
+          "properties": {
+            "thinking_shift": {
+              "type": "integer",
+              "minimum": -2,
+              "maximum": 2
+            },
+            "allow_verifiable_down": {
+              "type": "boolean"
+            },
+            "tier_shift": {
+              "type": "integer",
+              "minimum": -1,
+              "maximum": 1
+            }
+          }
+        },
+        "quality": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "thinking_shift",
+            "allow_verifiable_down"
+          ],
+          "properties": {
+            "thinking_shift": {
+              "type": "integer",
+              "minimum": -2,
+              "maximum": 2
+            },
+            "allow_verifiable_down": {
+              "type": "boolean"
+            },
+            "tier_shift": {
+              "type": "integer",
+              "minimum": -1,
+              "maximum": 1
+            }
+          }
+        }
+      }
+    },
+    "thinking_rules": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "reasoning_up_at",
+        "max_thinking"
+      ],
+      "properties": {
+        "reasoning_up_at": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 3
+        },
+        "max_thinking": {
+          "$ref": "common.schema.json#/$defs/thinking"
+        }
+      }
+    }
+  }
+}

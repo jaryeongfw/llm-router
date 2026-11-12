@@ -1,0 +1,226 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "seed-case.schema.json",
+  "title": "실행형 시드 케이스",
+  "type": "object",
+  "required": [
+    "id",
+    "fixture",
+    "task_type",
+    "prompt",
+    "rewrites",
+    "labels",
+    "verification"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(-[a-z0-9]+)+$"
+    },
+    "fixture": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "task_type": {
+      "$ref": "common.schema.json#/$defs/task_type"
+    },
+    "summary": {
+      "type": "string"
+    },
+    "prompt": {
+      "type": "string",
+      "minLength": 5
+    },
+    "rewrites": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "items": {
+        "type": "string",
+        "minLength": 5
+      }
+    },
+    "labels": {
+      "type": "object",
+      "required": [
+        "hard_constraints",
+        "dimensions"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "hard_constraints": {
+          "$ref": "common.schema.json#/$defs/hard_constraints"
+        },
+        "dimensions": {
+          "$ref": "common.schema.json#/$defs/dimensions"
+        },
+        "note": {
+          "type": "string"
+        }
+      }
+    },
+    "verification": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "type",
+            "command"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "const": "command"
+            },
+            "command": {
+              "type": "string"
+            },
+            "timeout_s": {
+              "type": "integer"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "type",
+            "test_command",
+            "mutants",
+            "test_globs"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "const": "mutation"
+            },
+            "test_command": {
+              "type": "string"
+            },
+            "test_globs": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string"
+              }
+            },
+            "mutants": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string"
+              }
+            },
+            "timeout_s": {
+              "type": "integer"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "type",
+            "rubric",
+            "pass_threshold"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "const": "rubric"
+            },
+            "artifact": {
+              "type": "string",
+              "description": "파일 경로. 없으면 최종 응답 텍스트"
+            },
+            "rubric": {
+              "$ref": "#/$defs/rubric"
+            },
+            "pass_threshold": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "type",
+            "command",
+            "rubric",
+            "pass_threshold"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "const": "hybrid"
+            },
+            "command": {
+              "type": "string"
+            },
+            "artifact": {
+              "type": "string"
+            },
+            "rubric": {
+              "$ref": "#/$defs/rubric"
+            },
+            "pass_threshold": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "timeout_s": {
+              "type": "integer"
+            }
+          }
+        }
+      ]
+    },
+    "budget": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "max_turns": {
+          "type": "integer"
+        },
+        "timeout_s": {
+          "type": "integer"
+        }
+      }
+    },
+    "expected_tier_hypothesis": {
+      "$ref": "common.schema.json#/$defs/id"
+    },
+    "expected_thinking_hypothesis": {
+      "$ref": "common.schema.json#/$defs/thinking"
+    }
+  },
+  "$defs": {
+    "rubric": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "criterion",
+          "must"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "criterion": {
+            "type": "string"
+          },
+          "must": {
+            "type": "boolean"
+          }
+        }
+      }
+    }
+  }
+}

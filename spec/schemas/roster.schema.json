@@ -1,0 +1,152 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "roster.schema.json",
+  "title": "티어 구성",
+  "type": "object",
+  "required": [
+    "version",
+    "tiers",
+    "measure_only",
+    "analyzers",
+    "judge"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "version": {
+      "type": "integer"
+    },
+    "source_note": {
+      "type": "string"
+    },
+    "tiers": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/tier"
+      }
+    },
+    "measure_only": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/model"
+      }
+    },
+    "analyzers": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/model"
+      }
+    },
+    "judge": {
+      "$ref": "#/$defs/model"
+    }
+  },
+  "$defs": {
+    "model": {
+      "type": "object",
+      "required": [
+        "ref",
+        "data_policy",
+        "price",
+        "context_window",
+        "max_output",
+        "capabilities",
+        "thinking_levels",
+        "default_thinking"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "ref": {
+          "$ref": "common.schema.json#/$defs/model_ref"
+        },
+        "data_policy": {
+          "enum": [
+            "internal",
+            "external_vendor"
+          ]
+        },
+        "price": {
+          "anyOf": [
+            {
+              "$ref": "common.schema.json#/$defs/price"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "price_above": {
+          "$ref": "common.schema.json#/$defs/price"
+        },
+        "unmetered": {
+          "type": "boolean"
+        },
+        "context_window": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "max_output": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "capabilities": {
+          "type": "array",
+          "items": {
+            "$ref": "common.schema.json#/$defs/capability"
+          }
+        },
+        "note": {
+          "type": "string"
+        },
+        "thinking_levels": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "common.schema.json#/$defs/thinking"
+          },
+          "description": "이 모델이 실제로 지원하는 추론 강도 (낮은 것부터)"
+        },
+        "default_thinking": {
+          "$ref": "common.schema.json#/$defs/thinking"
+        },
+        "role": {
+          "enum": [
+            "primary",
+            "fallback"
+          ],
+          "description": "티어 안에서의 역할. 앞에 있는 primary를 먼저 쓴다"
+        }
+      }
+    },
+    "tier": {
+      "type": "object",
+      "required": [
+        "id",
+        "rank",
+        "models",
+        "description"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "$ref": "common.schema.json#/$defs/id"
+        },
+        "rank": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "description": {
+          "type": "string"
+        },
+        "models": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/model"
+          }
+        }
+      }
+    }
+  }
+}

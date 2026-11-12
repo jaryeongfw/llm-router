@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "analyzer-gold.schema.json",
+  "title": "분석기 정답 세트 한 줄",
+  "type": "object",
+  "required": [
+    "id",
+    "prompt_template",
+    "expected"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string"
+    },
+    "prompt_template": {
+      "type": "string",
+      "description": "{{FAKE_*}} 자리표시자 허용"
+    },
+    "attachments": {
+      "type": "array",
+      "items": {
+        "enum": [
+          "image"
+        ]
+      }
+    },
+    "expected": {
+      "type": "object",
+      "required": [
+        "data_sensitivity",
+        "irreversible_side_effects"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "data_sensitivity": {
+          "$ref": "common.schema.json#/$defs/data_sensitivity"
+        },
+        "irreversible_side_effects": {
+          "type": "boolean"
+        },
+        "rule_groups": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "secret",
+              "pii",
+              "internal_marker",
+              "user_explicit",
+              "side_effect",
+              "capability"
+            ]
+          }
+        },
+        "required_capabilities": {
+          "type": "array",
+          "items": {
+            "$ref": "common.schema.json#/$defs/capability"
+          }
+        },
+        "task_type": {
+          "$ref": "common.schema.json#/$defs/task_type"
+        },
+        "difficulty": {
+          "$ref": "common.schema.json#/$defs/level"
+        },
+        "ambiguity": {
+          "$ref": "common.schema.json#/$defs/level"
+        }
+      }
+    },
+    "note": {
+      "type": "string"
+    }
+  }
+}

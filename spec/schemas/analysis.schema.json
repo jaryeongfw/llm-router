@@ -1,0 +1,93 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "analysis.schema.json",
+  "title": "분석기 출력",
+  "type": "object",
+  "required": [
+    "v",
+    "task_type",
+    "hard_constraints",
+    "dimensions",
+    "difficulty_rationale",
+    "context_signals",
+    "rule_hits",
+    "confidence",
+    "stage2"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "v": {
+      "const": 1
+    },
+    "task_type": {
+      "$ref": "common.schema.json#/$defs/task_type"
+    },
+    "hard_constraints": {
+      "$ref": "common.schema.json#/$defs/hard_constraints"
+    },
+    "dimensions": {
+      "$ref": "common.schema.json#/$defs/dimensions"
+    },
+    "difficulty_rationale": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "context_signals": {
+      "type": "object",
+      "required": [
+        "matched_files",
+        "est_context_tokens"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "matched_files": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "est_context_tokens": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "target_files": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        }
+      }
+    },
+    "rule_hits": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "규칙 id만. 매치된 값은 넣지 않는다"
+    },
+    "confidence": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "stage2": {
+      "enum": [
+        "ok",
+        "timeout",
+        "parse_error",
+        "unavailable",
+        "skipped"
+      ]
+    },
+    "sensitivity_suspected": {
+      "type": "boolean"
+    }
+  }
+}

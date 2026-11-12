@@ -1,0 +1,101 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "rules.schema.json",
+  "title": "1단 규칙",
+  "type": "object",
+  "required": [
+    "version",
+    "rules"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "version": {
+      "type": "integer"
+    },
+    "note": {
+      "type": "string"
+    },
+    "rules": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "group",
+          "kind",
+          "effect"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z_]+\\.[a-z0-9_]+$"
+          },
+          "group": {
+            "enum": [
+              "secret",
+              "pii",
+              "internal_marker",
+              "user_explicit",
+              "side_effect",
+              "capability"
+            ]
+          },
+          "kind": {
+            "enum": [
+              "regex",
+              "keywords",
+              "config_list",
+              "attachment",
+              "context_estimate"
+            ]
+          },
+          "pattern": {
+            "type": "string"
+          },
+          "flags": {
+            "type": "string",
+            "pattern": "^[imsu]*$"
+          },
+          "keywords": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "validator": {
+            "enum": [
+              "luhn",
+              "kr_rrn_shape"
+            ]
+          },
+          "config_key": {
+            "type": "string"
+          },
+          "threshold_tokens": {
+            "type": "integer"
+          },
+          "effect": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "data_sensitivity": {
+                "$ref": "common.schema.json#/$defs/data_sensitivity"
+              },
+              "irreversible_side_effects": {
+                "type": "boolean"
+              },
+              "add_capability": {
+                "$ref": "common.schema.json#/$defs/capability"
+              }
+            }
+          },
+          "note": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

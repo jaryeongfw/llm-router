@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "outcome-log.schema.json",
+  "title": "결과 로그 한 줄",
+  "type": "object",
+  "required": [
+    "v",
+    "task_id",
+    "ts",
+    "decision_ref",
+    "signal"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "v": {
+      "const": 1
+    },
+    "task_id": {
+      "type": "string"
+    },
+    "ts": {
+      "type": "string"
+    },
+    "decision_ref": {
+      "type": "string"
+    },
+    "signal": {
+      "enum": [
+        "escalated",
+        "user_pinned_up",
+        "user_pinned_down",
+        "verify_exit_code",
+        "tool_error_loop",
+        "aborted",
+        "feedback",
+        "task_closed"
+      ]
+    },
+    "value": {
+      "type": [
+        "string",
+        "number",
+        "boolean",
+        "null"
+      ]
+    },
+    "usage_by_model": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "common.schema.json#/$defs/usage"
+      }
+    },
+    "cost_usd": {
+      "type": [
+        "number",
+        "null"
+      ]
+    },
+    "turns": {
+      "type": [
+        "integer",
+        "null"
+      ]
+    }
+  }
+}

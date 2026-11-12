@@ -1,0 +1,131 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "run-record.schema.json",
+  "title": "시드 벤치마크 실행 기록",
+  "type": "object",
+  "required": [
+    "v",
+    "run_id",
+    "case_id",
+    "model",
+    "tier",
+    "rep",
+    "prompt_variant",
+    "started_at",
+    "usage",
+    "turns",
+    "duration_s",
+    "cost_usd",
+    "verification"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "v": {
+      "const": 1
+    },
+    "run_id": {
+      "type": "string"
+    },
+    "case_id": {
+      "type": "string"
+    },
+    "model": {
+      "$ref": "common.schema.json#/$defs/model_ref"
+    },
+    "tier": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "thinking": {
+      "type": "string"
+    },
+    "rep": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "prompt_variant": {
+      "enum": [
+        "prompt",
+        "rewrite0",
+        "rewrite1"
+      ]
+    },
+    "started_at": {
+      "type": "string"
+    },
+    "usage": {
+      "$ref": "common.schema.json#/$defs/usage"
+    },
+    "turns": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "duration_s": {
+      "type": "number",
+      "minimum": 0
+    },
+    "cost_usd": {
+      "type": "number",
+      "minimum": 0
+    },
+    "budget_exceeded": {
+      "type": "boolean"
+    },
+    "verification": {
+      "type": "object",
+      "required": [
+        "passed"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "passed": {
+          "type": "boolean"
+        },
+        "exit_code": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "mutants_killed": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "rubric": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "pass"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "pass": {
+                "type": "boolean"
+              },
+              "evidence": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "score": {
+          "type": [
+            "number",
+            "null"
+          ]
+        }
+      }
+    }
+  }
+}

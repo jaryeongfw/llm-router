@@ -1,0 +1,90 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "routing-table.schema.json",
+  "title": "조회표",
+  "type": "object",
+  "required": [
+    "version",
+    "tiers_order",
+    "default_tier",
+    "cells"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "version": {
+      "type": "integer"
+    },
+    "note": {
+      "type": "string"
+    },
+    "tiers_order": {
+      "type": "array",
+      "items": {
+        "$ref": "common.schema.json#/$defs/id"
+      }
+    },
+    "default_tier": {
+      "$ref": "common.schema.json#/$defs/id"
+    },
+    "cells": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "action",
+          "difficulty",
+          "tier",
+          "basis",
+          "n",
+          "success_rate",
+          "thinking"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "action": {
+            "anyOf": [
+              {
+                "$ref": "common.schema.json#/$defs/id"
+              },
+              {
+                "const": "*"
+              }
+            ]
+          },
+          "difficulty": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 3
+          },
+          "tier": {
+            "$ref": "common.schema.json#/$defs/id"
+          },
+          "basis": {
+            "enum": [
+              "prior",
+              "measured"
+            ]
+          },
+          "n": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "success_rate": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "minimum": 0,
+            "maximum": 1
+          },
+          "rationale": {
+            "type": "string"
+          },
+          "thinking": {
+            "$ref": "common.schema.json#/$defs/thinking"
+          }
+        }
+      }
+    }
+  }
+}
