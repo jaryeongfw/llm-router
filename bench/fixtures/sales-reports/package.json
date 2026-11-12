@@ -1,0 +1,9 @@
+{
+  "name": "sales-reports",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --disable-warning=ExperimentalWarning --test \"test/**/*.test.ts\"",
+    "query": "node --disable-warning=ExperimentalWarning src/cli.ts"
+  }
+}
