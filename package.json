@@ -13,6 +13,7 @@
     "check:cases": "node scripts/check-cases.ts",
     "check:rules": "node scripts/check-rules.ts",
     "check": "npm run validate && npm run check:rules && npm run check:cases",
-    "test": "node --test \"test/**/*.test.ts\""
+    "test": "node --test \"test/**/*.test.ts\"",
+    "e2e:secrets": "node scripts/e2e-secret-guard.ts"
   }
 }
