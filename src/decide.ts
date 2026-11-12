@@ -129,6 +129,7 @@ export function decide(
     adjustments.push("sensitivity_filter");
     reasons.push("민감 데이터 → local 티어만");
   }
+  const afterSensitivity = candidates.length;
   // 비밀정보 (07-spec §6.5)
   //   mask : 런타임이 모든 모델 호출에서 가리므로(src/secret-guard.ts) 티어에 영향 없음
   //   heavy: secret_policy.tier만 후보 / block: 결정하지 않음
@@ -200,6 +201,9 @@ export function decide(
     if (before === 0) throw new Error("사용 가능한 티어가 없습니다");
     if (secret && cfg.secret_policy.mode === "heavy" && a.hard_constraints.data_sensitivity === "internal_only") {
       throw new Error("비밀정보와 로컬 전용 데이터가 함께 있어 배정할 티어가 없습니다. 비밀정보를 지우고 다시 요청하세요");
+    }
+    if (a.hard_constraints.data_sensitivity === "internal_only" && afterSensitivity > 0) {
+      throw new Error(`필수 제약을 만족하는 티어가 없습니다: 로컬 전용 데이터인데 local 모델이 필요 능력(${caps.join(", ") || "없음"}) 또는 컨텍스트 크기${est !== null ? `(약 ${est.toLocaleString("en-US")} 토큰)` : ""}를 만족하지 않습니다. local_models에 capabilities·context_window를 지정하거나, /compact로 대화를 줄이거나, 새 세션에서 다시 요청하세요`);
     }
     if (a.hard_constraints.data_sensitivity === "internal_only") {
       throw new Error("필수 제약을 만족하는 티어가 없습니다: 로컬 전용 데이터(개인정보·기밀 표식·#local)가 있는데 쓸 수 있는 local 모델이 없습니다. 로컬 모델을 쓰려면 사용자 설정 local_models에 지정하고, 외부 모델로 보내도 되는 내용이면 해당 표현을 빼고 다시 요청하세요");
