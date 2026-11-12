@@ -1,121 +1,141 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "decision-log.schema.json",
-  "title": "결정 로그 한 줄 (원문 미저장)",
-  "type": "object",
-  "required": [
-    "v",
-    "decision_id",
-    "task_id",
-    "ts",
-    "prompt_hash",
-    "analysis",
-    "decision",
-    "latency_ms"
+  "title": "결정 로그 한 줄 (원문 미저장). decisions.jsonl의 각 줄은 결정 기록 또는 도구 결과 경고 기록",
+  "oneOf": [
+    {
+      "$ref": "#/$defs/decision"
+    },
+    {
+      "$ref": "#/$defs/tool_result_warning"
+    }
   ],
-  "additionalProperties": false,
-  "properties": {
-    "v": {
-      "const": 1
-    },
-    "decision_id": {
-      "type": "string"
-    },
-    "task_id": {
-      "type": "string"
-    },
-    "ts": {
-      "type": "string"
-    },
-    "prompt_hash": {
-      "type": "string",
-      "pattern": "^[0-9a-f]{32}$"
-    },
-    "analysis": {
-      "$ref": "analysis.schema.json"
-    },
+  "$defs": {
     "decision": {
       "type": "object",
       "required": [
-        "tier",
-        "model",
-        "base_tier",
-        "adjustments",
-        "capped",
-        "ask_user",
-        "reason",
-        "thinking",
-        "base_thinking",
-        "thinking_adjustments",
-        "operating_point"
+        "v",
+        "ts",
+        "session",
+        "query",
+        "prompt_hash",
+        "rule_hits",
+        "task_type",
+        "dimensions",
+        "confidence",
+        "decision",
+        "analyzer",
+        "stage2",
+        "latency_ms"
       ],
       "additionalProperties": false,
       "properties": {
-        "tier": {
-          "$ref": "common.schema.json#/$defs/id"
+        "v": {
+          "const": 1
         },
-        "model": {
-          "$ref": "common.schema.json#/$defs/model_ref"
+        "kind": {
+          "const": "decision"
         },
-        "base_tier": {
-          "$ref": "common.schema.json#/$defs/id"
-        },
-        "table_cell": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "adjustments": {
-          "type": "array",
-          "items": {
-            "enum": [
-              "side_effect_floor",
-              "scope_up",
-              "low_confidence_up",
-              "verifiable_down",
-              "capability_filter",
-              "context_filter",
-              "sensitivity_filter",
-              "secret_policy"
-            ]
-          }
-        },
-        "capped": {
-          "type": "boolean"
-        },
-        "ask_user": {
-          "type": "boolean"
-        },
-        "reason": {
+        "ts": {
           "type": "string"
         },
-        "fallback_reason": {
-          "type": [
-            "string",
-            "null"
-          ]
+        "session": {
+          "type": "string",
+          "description": "세션 id의 HMAC 앞 12자"
         },
-        "thinking": {
-          "$ref": "common.schema.json#/$defs/thinking"
+        "query": {
+          "type": "string",
+          "pattern": "^q_[0-9a-f]{12}$"
         },
-        "base_thinking": {
-          "$ref": "common.schema.json#/$defs/thinking"
+        "prompt_hash": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{32}$"
         },
-        "operating_point": {
-          "$ref": "common.schema.json#/$defs/operating_point"
-        },
-        "thinking_adjustments": {
+        "rule_hits": {
           "type": "array",
           "items": {
-            "enum": [
-              "reasoning_up",
-              "verifiable_down",
-              "operating_point_shift",
-              "clamped_to_model",
-              "local_off",
-              "difficulty_up"
-            ]
+            "type": "string"
+          },
+          "description": "규칙 id만. 매치된 값은 넣지 않는다"
+        },
+        "task_type": {
+          "$ref": "common.schema.json#/$defs/task_type"
+        },
+        "dimensions": {
+          "$ref": "common.schema.json#/$defs/dimensions"
+        },
+        "confidence": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "decision": {
+          "type": "object",
+          "required": [
+            "tier",
+            "model",
+            "thinking",
+            "cell",
+            "adjustments",
+            "thinking_adjustments",
+            "capped",
+            "ask_user",
+            "operating_point"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "tier": {
+              "$ref": "common.schema.json#/$defs/id"
+            },
+            "model": {
+              "$ref": "common.schema.json#/$defs/model_ref"
+            },
+            "thinking": {
+              "$ref": "common.schema.json#/$defs/thinking"
+            },
+            "cell": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "adjustments": {
+              "type": "array",
+              "items": {
+                "enum": [
+                  "side_effect_floor",
+                  "scope_up",
+                  "low_confidence_up",
+                  "verifiable_down",
+                  "capability_filter",
+                  "context_filter",
+                  "sensitivity_filter",
+                  "secret_policy"
+                ]
+              }
+            },
+            "thinking_adjustments": {
+              "type": "array",
+              "items": {
+                "enum": [
+                  "reasoning_up",
+                  "verifiable_down",
+                  "operating_point_shift",
+                  "clamped_to_model",
+                  "local_off",
+                  "difficulty_up"
+                ]
+              }
+            },
+            "capped": {
+              "type": "boolean"
+            },
+            "ask_user": {
+              "type": "boolean"
+            },
+            "operating_point": {
+              "$ref": "common.schema.json#/$defs/operating_point"
+            }
           }
         },
         "analyzer": {
@@ -123,39 +143,144 @@
             "string",
             "null"
           ],
-          "description": "2단에 쓴 분석기 모델"
+          "description": "2단에 쓴 분석기 모델 (없으면 null)"
+        },
+        "stage2": {
+          "enum": [
+            "ok",
+            "timeout",
+            "parse_error",
+            "unavailable"
+          ]
+        },
+        "stage2_error": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "오류 메시지 앞 200자"
+        },
+        "latency_ms": {
+          "type": "object",
+          "required": [
+            "stage1",
+            "stage2",
+            "total"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "stage1": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 0
+            },
+            "stage2": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 0
+            },
+            "total": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 0
+            }
+          }
+        },
+        "sensitive_by": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "stage1",
+              "stage2"
+            ]
+          },
+          "description": "로컬 전용으로 올린 출처"
+        },
+        "suspicion_ignored": {
+          "enum": [
+            "secret_masked",
+            "no_local",
+            null
+          ],
+          "description": "2단 민감 의심을 반영하지 않은 이유"
+        },
+        "est_context_tokens": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "est_basis": {
+          "enum": [
+            "usage",
+            "chars"
+          ],
+          "description": "토큰 추정 근거: 직전 응답 사용량 또는 문자 수"
+        },
+        "followup_context": {
+          "const": true,
+          "description": "짧은 후속 요청이라 앞 대화 일부를 판단에 함께 썼음"
         }
       }
     },
-    "latency_ms": {
+    "tool_result_warning": {
       "type": "object",
       "required": [
-        "stage1",
-        "stage2",
-        "total"
+        "v",
+        "kind",
+        "ts",
+        "session",
+        "model",
+        "items"
       ],
       "additionalProperties": false,
       "properties": {
-        "stage1": {
-          "type": [
-            "integer",
-            "null"
-          ],
-          "minimum": 0
+        "v": {
+          "const": 1
         },
-        "stage2": {
-          "type": [
-            "integer",
-            "null"
-          ],
-          "minimum": 0
+        "kind": {
+          "const": "tool_result_warning"
         },
-        "total": {
-          "type": [
-            "integer",
-            "null"
-          ],
-          "minimum": 0
+        "ts": {
+          "type": "string"
+        },
+        "session": {
+          "type": "string"
+        },
+        "model": {
+          "$ref": "common.schema.json#/$defs/model_ref"
+        },
+        "items": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": [
+              "tool",
+              "rules"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "tool": {
+                "type": "string"
+              },
+              "rules": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "규칙 id만"
+              }
+            }
+          }
+        },
+        "confirmed": {
+          "const": true,
+          "description": "tool_result_policy: confirm에서 사용자가 전송을 허용함"
         }
       }
     }
